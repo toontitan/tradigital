@@ -1,0 +1,11 @@
+{
+  "name": "tradigital",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Multi-angle G2 character builder for Cartoon Animator (CrazyTalk Animator)",
+  "scripts": {
+    "dump": "node tools/dump-swf.js",
+    "test": "node --test test/"
+  }
+}
