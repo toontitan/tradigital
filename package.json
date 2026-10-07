@@ -6,6 +6,6 @@
   "description": "Multi-angle G2 character builder for Cartoon Animator (CrazyTalk Animator)",
   "scripts": {
     "dump": "node tools/dump-swf.js",
-    "test": "node --test test/"
+    "test": "node --test \"test/**/*.test.js\""
   }
 }

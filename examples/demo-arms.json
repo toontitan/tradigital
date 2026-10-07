@@ -1,0 +1,13 @@
+{
+  "template": "template.swf",
+  "parts": [
+    {
+      "name": "Right_arm_0", "mirrorTo": "Left_arm_0", "origin": [269.6, 355.4],
+      "paths": [{ "d": "M269.6,333 C240,335 215,340 196,345 L196,368 C215,372 240,376 269.6,378 Z", "fill": "#e03030", "stroke": "#000000", "strokeWidth": 3 }]
+    },
+    {
+      "name": "Right_forearm_0", "mirrorTo": "Left_forearm_0", "origin": [196.7, 356.6],
+      "paths": [{ "d": "M196.7,346 L120,350 L120,366 L196.7,368 Z", "fill": "#3050e0", "stroke": "#000000", "strokeWidth": 3 }]
+    }
+  ]
+}
