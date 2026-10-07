@@ -140,12 +140,17 @@ export function serializePath(subs) {
   }).join('');
 }
 
-/** Reflect path data horizontally about the vertical line x = axis. */
-export function mirrorPathX(d, axis) {
-  const m = (p) => [2 * axis - p[0], p[1]];
+/** Apply fn([x,y]) -> [x,y] to every point (anchors and control points) of path data. */
+export function transformPath(d, fn) {
   return serializePath(parsePath(d).map(s => ({
     ...s,
-    start: m(s.start),
-    segs: s.segs.map(g => (g.t === 'L' ? { t: 'L', p: m(g.p) } : g.t === 'Q' ? { t: 'Q', c: m(g.c), p: m(g.p) } : { t: 'C', c1: m(g.c1), c2: m(g.c2), p: m(g.p) })),
+    start: fn(s.start),
+    segs: s.segs.map(g => (g.t === 'L' ? { t: 'L', p: fn(g.p) } : g.t === 'Q' ? { t: 'Q', c: fn(g.c), p: fn(g.p) } : { t: 'C', c1: fn(g.c1), c2: fn(g.c2), p: fn(g.p) })),
   })));
 }
+
+/** Reflect path data horizontally about the vertical line x = axis. */
+export const mirrorPathX = (d, axis) => transformPath(d, ([x, y]) => [2 * axis - x, y]);
+
+/** Stage-space reflection used by the rig: x' = K - x, y' = y + dy. */
+export const reflectPath = (d, K, dy) => transformPath(d, ([x, y]) => [K - x, y + dy]);
