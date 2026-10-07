@@ -32,3 +32,10 @@ A "Pivots (Do Not Edit)" folder holds them in the FLA.
 * Exact pivot semantics (instance origin vs. registration inside shape) - verify by round-trip + import test.
 * Whether frame labels inside expression sprites are required by Cartoon Animator or only instance names.
 * Which Cartoon Animator versions need what: user tests on 4.5; target compatibility 2.x-4.x.
+
+## Validated workflow (Cartoon Animator 4 and 5)
+1. Build the SWF (`node tools/build-swf.js spec.json out.swf`).
+2. In Cartoon Animator open `Billy (Base).ctActor` (the dev kit's base character) and import the SWF onto it.
+   Importing onto a different or broken base actor can produce wrong foot art even with the unmodified original SWF.
+3. Confirmed working: replacing arm/forearm art in the front view with the left side mirrored via `scaleX = -1`,
+   pivots moved with the parts, no import errors.
