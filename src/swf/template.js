@@ -1,6 +1,6 @@
 // Assemble a G2 SWF by editing a template SWF: replace the art behind named part instances,
 // reposition them and their pivot markers, and re-emit. Everything not touched is copied byte-for-byte.
-import { readSwf, TAG, parsePlaceObject2, parseDefineSprite, parseShapeHeader, BitReader, parseRect } from './reader.js';
+import { readSwf, TAG, parsePlaceObject2, parseDefineSprite, parseShapeHeader } from './reader.js';
 import { BitWriter, tag, u16, writeMatrix, swfFile } from './bits.js';
 import { encodeShape4 } from './shape.js';
 
@@ -69,6 +69,33 @@ export class TemplateSwf {
       pt.parsed = { ...pt.parsed, matrix: { ...pm, tx: mx, ty: my } };
       pt.body = placeBody(pt.parsed);
     }
+  }
+
+  /** Local bounds (px) of the symbol an instance shows: union of every variant/frame, children transformed. */
+  instanceBounds(name) { return this.symbolBounds(this.placement(name).parsed.characterId); }
+
+  symbolBounds(id, depth = 0) {
+    const i = this.chars.get(id);
+    if (i === undefined || depth > 8) return null;
+    const t = this.tags[i];
+    if (t.code === TAG.DefineSprite) {
+      let b = null;
+      for (const k of parseDefineSprite(t.body).tags) {
+        if (k.code !== TAG.PlaceObject2) continue;
+        const c = parsePlaceObject2(k.body);
+        if (c.characterId === undefined) continue;
+        const cb = this.symbolBounds(c.characterId, depth + 1);
+        if (!cb) continue;
+        const m = { scaleX: 1, scaleY: 1, skew0: 0, skew1: 0, tx: 0, ty: 0, ...(c.matrix || {}) };
+        const pts = [[cb.xMin, cb.yMin], [cb.xMax, cb.yMin], [cb.xMin, cb.yMax], [cb.xMax, cb.yMax]]
+          .map(([x, y]) => [m.scaleX * x + m.skew1 * y + m.tx / PX, m.skew0 * x + m.scaleY * y + m.ty / PX]);
+        const tb = { xMin: Math.min(...pts.map(p => p[0])), xMax: Math.max(...pts.map(p => p[0])), yMin: Math.min(...pts.map(p => p[1])), yMax: Math.max(...pts.map(p => p[1])) };
+        b = b ? { xMin: Math.min(b.xMin, tb.xMin), xMax: Math.max(b.xMax, tb.xMax), yMin: Math.min(b.yMin, tb.yMin), yMax: Math.max(b.yMax, tb.yMax) } : tb;
+      }
+      return b;
+    }
+    const h = parseShapeHeader(t.code, t.body).bounds;
+    return { xMin: h.xMin / PX, xMax: h.xMax / PX, yMin: h.yMin / PX, yMax: h.yMax / PX };
   }
 
   /** True when the template draws this instance mirrored horizontally. */
