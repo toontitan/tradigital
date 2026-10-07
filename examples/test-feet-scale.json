@@ -1,0 +1,12 @@
+{
+  "template": "template.swf",
+  "parts": [
+    {
+      "name": "Right_foot_0", "mirrorTo": "Left_foot_0", "mirrorMode": "scale", "origin": [279.15, 801],
+      "paths": [
+        { "d": "M301,789 L301,837 L216,837 C216,815 232,800 255,795 L270,789 Z", "fill": "#7a4a1e", "stroke": "#000000", "strokeWidth": 3 },
+        { "d": "M216,837 L216,822 C219,812 228,804 240,799 L252,837 Z", "fill": "#ffd400", "stroke": "#000000", "strokeWidth": 2 }
+      ]
+    }
+  ]
+}

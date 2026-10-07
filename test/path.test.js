@@ -35,3 +35,10 @@ test('arc converts to cubics ending at target', () => {
   assert.ok(s.segs.every(g => g.t === 'C'));
   assert.ok(Math.abs(s.segs.at(-1).p[0] - 100) < 1e-9);
 });
+
+test('mirrorPathX reflects about the axis and round-trips', async () => {
+  const { mirrorPathX } = await import('../src/svg/path.js');
+  const once = mirrorPathX('M10,0 C20,5 30,5 40,10 L40,20 Z', 50);
+  assert.equal(once, 'M90,0C80,5 70,5 60,10L60,20Z');
+  assert.equal(mirrorPathX(once, 50), 'M10,0C20,5 30,5 40,10L40,20Z');
+});

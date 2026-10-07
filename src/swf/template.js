@@ -51,16 +51,16 @@ export class TemplateSwf {
 
   /**
    * Point instance `name` at sprite `spriteId`, positioned at `origin` (stage px).
-   * Scale/skew sign of the template placement (mirroring) is kept. The matching pivot marker
+   * Scale/skew sign of the template placement (mirroring) is kept unless `scaleX` is given. The matching pivot marker
    * (`<name lowercased>_pivot`) is shifted by the same delta unless `pivot` ([x,y] px) is given.
    */
-  place(name, spriteId, origin, { pivot } = {}) {
+  place(name, spriteId, origin, { pivot, scaleX } = {}) {
     const t = this.placement(name);
     if (t.body[0] & 8 || t.parsed.hasClipDepth || t.parsed.hasClipActions) throw new Error(`${name}: unsupported placement flags`);
     const old = t.parsed.matrix;
     const nx = Math.round(origin[0] * PX), ny = Math.round(origin[1] * PX);
     const dx = nx - old.tx, dy = ny - old.ty;
-    t.parsed = { ...t.parsed, characterId: spriteId, matrix: { ...old, tx: nx, ty: ny } };
+    t.parsed = { ...t.parsed, characterId: spriteId, matrix: { ...old, ...(scaleX !== undefined && { scaleX }), tx: nx, ty: ny } };
     t.body = placeBody(t.parsed);
     const pn = `${name.toLowerCase()}_pivot`;
     if (this.has(pn)) {

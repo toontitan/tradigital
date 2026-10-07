@@ -123,3 +123,29 @@ export function flatten(sub, steps = 8) {
   }
   return pts;
 }
+
+const f = (v) => +v.toFixed(3);
+const pair = (p) => `${f(p[0])},${f(p[1])}`;
+
+/** Serialize subpaths back to absolute SVG path data. */
+export function serializePath(subs) {
+  return subs.map((s) => {
+    let d = `M${pair(s.start)}`;
+    for (const g of s.segs) {
+      if (g.t === 'L') d += `L${pair(g.p)}`;
+      else if (g.t === 'Q') d += `Q${pair(g.c)} ${pair(g.p)}`;
+      else d += `C${pair(g.c1)} ${pair(g.c2)} ${pair(g.p)}`;
+    }
+    return d + (s.closed ? 'Z' : '');
+  }).join('');
+}
+
+/** Reflect path data horizontally about the vertical line x = axis. */
+export function mirrorPathX(d, axis) {
+  const m = (p) => [2 * axis - p[0], p[1]];
+  return serializePath(parsePath(d).map(s => ({
+    ...s,
+    start: m(s.start),
+    segs: s.segs.map(g => (g.t === 'L' ? { t: 'L', p: m(g.p) } : g.t === 'Q' ? { t: 'Q', c: m(g.c), p: m(g.p) } : { t: 'C', c1: m(g.c1), c2: m(g.c2), p: m(g.p) })),
+  })));
+}
