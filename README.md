@@ -13,6 +13,24 @@ BILLY_SWF=/path/to/Billy\ Red\ Shirt.swf npm test   # template-dependent tests a
 
 `examples/template.swf` is not committed (`*.swf` is gitignored); copy your template there.
 
+## Run it yourself
+
+Needs Node 20+ (tested on 22). Your template SWF is not in the repo (`*.swf` is gitignored), so you supply it.
+
+```
+git clone -b claude/g2-crazy-talk-animator-o1absg https://github.com/toontitan/tradigital.git
+cd tradigital
+npm install
+copy "Billy Red Shirt.swf" examples\template.swf      # Windows   (macOS/Linux: cp ... examples/template.swf)
+npm run build:web
+npm run server                                         # then open http://localhost:3001
+```
+
+Options: `PORT=8080` changes the port, `TEMPLATE_SWF=/path/to/template.swf` points at a template elsewhere.
+On a server: run the same steps and put it behind a reverse proxy. There is no login, so do not expose it publicly as is;
+exports are written to the browser's downloads and nothing is stored server-side.
+Dev mode with hot reload: `npm run server` in one terminal and `npm run web` in another (http://localhost:5173).
+
 ## Editor
 
 ```
