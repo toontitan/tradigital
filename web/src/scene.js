@@ -56,3 +56,11 @@ export function slotStatus(art, key) {
 
 export const partnerKey = (part, view) => { const m = mirrorOf(part, view); return m ? instanceName(m.part, m.view) : null; };
 export { getPart };
+
+/** Which side of the screen a Left_/Right_ part sits on in a view (CTA's left is always the character's own left). */
+export function screenSide(tpl, part, view) {
+  if (!/^(Left|Right)_/.test(part)) return null;
+  const mine = tpl.slots[instanceName(part, view)], other = tpl.slots[instanceName(part.startsWith('Left_') ? `Right_${part.slice(5)}` : `Left_${part.slice(6)}`, view)];
+  if (!mine || !other || Math.abs(mine.origin[0] - other.origin[0]) < 1) return null;
+  return mine.origin[0] > other.origin[0] ? 'right' : 'left';
+}

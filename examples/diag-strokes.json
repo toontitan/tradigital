@@ -1,0 +1,66 @@
+{
+  "name": "Diag_Strokes",
+  "rigVersion": "2.0",
+  "options": {
+    "fallback": true,
+    "minStrokeOnly": 0
+  },
+  "art": {
+    "Right_forearm_0": {
+      "origin": [
+        196.7,
+        356.6
+      ],
+      "paths": [
+        {
+          "d": "M196,350L120,358",
+          "fill": "none",
+          "stroke": "#000000",
+          "strokeWidth": 3
+        }
+      ]
+    },
+    "Left_forearm_0": {
+      "origin": [
+        450.45,
+        356.5
+      ],
+      "paths": [
+        {
+          "d": "M451,350L527,358",
+          "fill": "none",
+          "stroke": "#000000",
+          "strokeWidth": 10
+        }
+      ]
+    },
+    "Right_shank_0": {
+      "origin": [
+        279.15,
+        685
+      ],
+      "paths": [
+        {
+          "d": "M279,686C272,720 264,752 260,790",
+          "fill": "none",
+          "stroke": "#000000",
+          "strokeWidth": 10
+        }
+      ]
+    },
+    "Left_shank_0": {
+      "origin": [
+        368,
+        685
+      ],
+      "paths": [
+        {
+          "d": "M363,686L373,686L377,790L369,790Z",
+          "fill": "#000000",
+          "stroke": "none",
+          "strokeWidth": 0
+        }
+      ]
+    }
+  }
+}

@@ -35,3 +35,5 @@ kbd { font: 10px ui-monospace, monospace; opacity: .7; }
 .paths { list-style: none; margin: 0; padding: 0; } .paths li { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 5px; border: 1px solid transparent; cursor: pointer; }
 .paths li.on { border-color: var(--accent); } .paths .sw { width: 14px; height: 14px; border: 2px solid; border-radius: 3px; } .paths .acts { margin-left: auto; display: flex; gap: 2px; } .paths .acts button { padding: 0 5px; }
 .fatal { max-width: 520px; margin: 14vh auto; padding: 0 20px; }
+
+.side { margin: -4px 0 10px; color: var(--mute); font-size: 12px; }

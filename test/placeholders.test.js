@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { TemplateSwf } from '../src/swf/template.js';
 import { limbGeometry, placeholderFor, isLimb } from '../src/model/placeholders.js';
 import { VIEWS, instanceName } from '../src/model/rig.js';
+import { parsePath } from '../src/svg/path.js';
 import { readSwf, TAG, parsePlaceObject2, parseDefineSprite } from '../src/swf/reader.js';
 import { decodeShape } from '../src/swf/shapeDecode.js';
 
@@ -32,12 +33,31 @@ test('placeholder styles: limbs are fill-only, torso translucent, hair outline',
   assert.ok(isLimb('Left_shank') && !isLimb('Face') && !isLimb('Left_hand'));
   const arm = placeholderFor(t, 'Left_arm', '0'), torso = placeholderFor(t, 'Upper_torso', '0'), hair = placeholderFor(t, 'Front_hair', '0'), foot = placeholderFor(t, 'Left_foot', '0');
   assert.ok(arm.paths.every(p => !p.stroke) && arm.joints.length === 2);
-  assert.equal(foot.paths.length, 2); // body + ankle circle
+  assert.equal(arm.paths.length, 3); // capsule + two outline strips (filled geometry, not hairline strokes)
+  assert.equal(foot.paths.length, 2); // outlined body + ankle circle on top
+  assert.equal(foot.paths[0].strokeWidth, 3);
   assert.match(torso.paths[0].fill, /^#[0-9a-f]{6}8c$/i);
-  assert.equal(hair.paths[0].fill, 'none');
+  assert.notEqual(hair.paths[0].fill, 'none');
 });
 
-test('exported torso placeholder keeps its alpha; limb shapes carry no outline', opts, async () => {
+test('front hair cap stays above the eyebrows in every view', opts, () => {
+  const t = new TemplateSwf(fs.readFileSync(TPL));
+  for (const view of VIEWS) {
+    const hair = placeholderFor(t, 'Front_hair', view);
+    // bottom of the cap (local) -> stage via the hair's own matrix is only meaningful for upright hair; check local ordering instead
+    const ys = parsePath(hair.paths[0].d).flatMap(sub => [sub.start, ...sub.segs.map(g => g.p)]).map(p => p[1]);
+    const capBottom = Math.max(...ys), key = instanceName('Front_hair', view), m = t.placement(key).parsed.matrix, [hx, hy] = t.position(key);
+    for (const brow of ['Left_brow', 'Right_brow']) {
+      const bk = instanceName(brow, view);
+      if (!t.has(bk)) continue; // side views only carry one brow
+      const vb = t.instanceBounds(bk), [bx, by] = t.position(bk);
+      const browTopStage = by + vb.yMin, capBottomStage = Math.max(hy + m.scaleY * Math.min(...ys), hy + m.scaleY * capBottom);
+      assert.ok(capBottomStage <= browTopStage + 0.5, `${brow}@${view}: cap bottom ${capBottomStage.toFixed(1)} vs brow top ${browTopStage.toFixed(1)}`);
+    }
+  }
+});
+
+test('exported torso placeholder keeps its alpha; limb shapes carry no hairline strokes', opts, async () => {
   const { compileCharacter } = await import('../src/model/compile.js');
   const { createCharacter } = await import('../src/model/character.js');
   const { swf } = compileCharacter(createCharacter(), fs.readFileSync(TPL));
@@ -46,5 +66,5 @@ test('exported torso placeholder keeps its alpha; limb shapes carry no outline',
     .tags.filter(x => x.code === TAG.PlaceObject2).map(x => decodeShape(TAG.DefineShape4, out.tags.find(s => s.code === TAG.DefineShape4 && s.body.readUInt16LE(0) === parsePlaceObject2(x.body).characterId).body));
   assert.equal(shapes('Upper_torso_0')[0].fills[0].color[3], 0x8c);
   for (const s of shapes('Left_forearm_45')) assert.equal(s.lines.length, 0);
-  assert.equal(shapes('Left_arm_0').length, 1);
+  assert.equal(shapes('Left_arm_0').length, 3);
 });

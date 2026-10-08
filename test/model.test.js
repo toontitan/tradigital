@@ -47,8 +47,10 @@ test('compile: drawn + mirrored + fallback against the Billy template', { skip: 
   let ch = createCharacter();
   ch = setArt(ch, 'Right_foot', '45', { origin: [1470.35, 801], paths: [{ d: 'M1400,790L1500,790L1500,837L1400,837Z', fill: '#ff0000' }] });
   ch = setArt(ch, 'Left_foot', '315', { mirrorOf: 'Right_foot_45' });
+  ch = setArt(ch, 'Right_forearm', '0', { origin: [196.7, 356.6], paths: [{ d: 'M196,350L120,358', fill: 'none', stroke: '#000', strokeWidth: 3 }] });
   const { swf, report } = compileCharacter(ch, tpl);
-  assert.deepEqual(report.drawn, ['Right_foot_45']);
+  assert.ok(report.warnings.some(w => /Right_forearm_0: stroke-only path widened from 3px to 4px/.test(w)));
+  assert.deepEqual(report.drawn.sort(), ['Right_foot_45', 'Right_forearm_0']);
   assert.deepEqual(report.mirrored, ['Left_foot_315']);
   assert.ok(report.fallback.length > 150, `fallback ${report.fallback.length}`);
   assert.ok(!report.fallback.some(k => /^(Left|Right)_(eye|brow|hand)|^(Nose|Mouth)/.test(k)), 'expression sets keep template frames');
@@ -64,13 +66,6 @@ test('compile: drawn + mirrored + fallback against the Billy template', { skip: 
   for (const key of report.fallback) assert.deepEqual(placed[key].matrix, orig[key].matrix, key);
   assert.ok(report.fallback.includes('Left_arm_45') && Math.abs(orig.Left_arm_45.matrix.skew0) > 0.5, 'rotated arm covered');
   assert.deepEqual({ ...placed.Right_foot_45.matrix, tx: 0, ty: 0 }, { scaleX: 1, scaleY: 1, skew0: 0, skew1: 0, tx: 0, ty: 0 });
-  // the hair placeholder must not be a solid fill (it would cover the eyes/brows beneath it)
-  const { decodeShape } = await import('../src/swf/shapeDecode.js');
-  const { parseDefineSprite } = await import('../src/swf/reader.js');
-  const out = readSwf(swf);
-  const sprite = out.tags.find(x => x.code === TAG.DefineSprite && x.body.readUInt16LE(0) === placed.Front_hair_0.characterId);
-  const child = parseDefineSprite(sprite.body).tags.filter(x => x.code === TAG.PlaceObject2).map(x => parsePlaceObject2(x.body))[0];
-  const shape = decodeShape(TAG.DefineShape4, out.tags.find(x => x.code === TAG.DefineShape4 && x.body.readUInt16LE(0) === child.characterId).body);
-  assert.equal(shape.fills.length, 0, 'Front_hair fallback is outline-only');
-  assert.equal(shape.lines.length, 1);
+  // minimum thickness for stroke-only paths is reported
+  assert.ok(Array.isArray(report.warnings));
 });

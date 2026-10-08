@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Stage from './Stage.jsx';
 import { useStore, PART_GROUPS } from './store.js';
 import { VIEWS, instanceName, getPart } from '../../src/model/rig.js';
-import { viewScene, viewBounds, slotStatus, partnerKey } from './scene.js';
+import { viewScene, viewBounds, slotStatus, partnerKey, screenSide } from './scene.js';
 import { validate } from '../../src/model/character.js';
 
 const VIEW_LABEL = { 0: 'Front 0°', 45: '45°', 90: 'Side 90°', 135: '135°', 180: 'Back 180°', 225: '225°', 270: 'Side 270°', 315: '315°', top: 'Top', bottom: 'Bottom' };
@@ -57,6 +57,7 @@ function Inspector() {
   return (
     <div className="inspector">
       <h3>{s.part.replaceAll('_', ' ')} <small>@ {VIEW_LABEL[s.view]}</small></h3>
+      {screenSide(s.template, s.part, s.view) && <p className="side">his {s.part.startsWith('Left_') ? 'left' : 'right'} · appears on the <b>screen {screenSide(s.template, s.part, s.view)}</b> in this view</p>}
       <div className="tools">
         {TOOLS.map(([id, label, k]) => <button key={id} className={s.tool === id ? 'on' : ''} onClick={() => s.setTool(id)} title={`${label} (${k})`} data-tool={id}>{label}<kbd>{k}</kbd></button>)}
       </div>

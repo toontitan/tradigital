@@ -10,7 +10,7 @@ const save = (ch) => { try { localStorage.setItem(KEY, JSON.stringify(ch)); } ca
 export const useStore = create((set, get) => ({
   template: null, error: null, character: load(),
   view: '0', part: 'Right_arm', tool: 'pen', selIdx: null,
-  style: { fill: '#e03030', stroke: '#000000', strokeWidth: 3, filled: true, stroked: true },
+  style: { fill: '#e03030', stroke: '#000000', strokeWidth: 4, filled: true, stroked: true },
   undo: [], redo: [],
 
   async loadTemplate() {
