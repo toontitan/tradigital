@@ -30,3 +30,12 @@ test('replacing art repoints the named instance and moves its pivot', opts, () =
   assert.equal(placed.find(p => p.name === 'right_arm_0_pivot').matrix.tx, px0 + 200);
   assert.equal(placed.length, 568);
 });
+
+test('instance bounds are visual: a flipped instance extends the opposite way from its partner', opts, () => {
+  const t = new TemplateSwf(fs.readFileSync(BILLY));
+  const r = t.instanceBounds('Right_arm_0'), l = t.instanceBounds('Left_arm_0');
+  assert.ok(t.isMirrored('Left_arm_0') && !t.isMirrored('Right_arm_0'));
+  assert.ok(Math.abs(l.xMin + r.xMax) < 0.5 && Math.abs(l.xMax + r.xMin) < 0.5, JSON.stringify({ l, r }));
+  // right arm reaches left of its joint, left arm reaches right of its joint
+  assert.ok(r.xMin < -50 && l.xMax > 50);
+});

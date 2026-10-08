@@ -72,7 +72,15 @@ export class TemplateSwf {
   }
 
   /** Local bounds (px) of the symbol an instance shows: union of every variant/frame, children transformed. */
-  instanceBounds(name) { return this.symbolBounds(this.placement(name).parsed.characterId); }
+  /** Visual bounds (px, relative to the instance origin) after the instance's own scale/flip/skew. */
+  instanceBounds(name) {
+    const pl = this.placement(name).parsed, b = this.symbolBounds(pl.characterId);
+    if (!b) return null;
+    const m = { scaleX: 1, scaleY: 1, skew0: 0, skew1: 0, ...(pl.matrix || {}) };
+    const pts = [[b.xMin, b.yMin], [b.xMax, b.yMin], [b.xMin, b.yMax], [b.xMax, b.yMax]]
+      .map(([x, y]) => [m.scaleX * x + m.skew1 * y, m.skew0 * x + m.scaleY * y]);
+    return { xMin: Math.min(...pts.map(p => p[0])), xMax: Math.max(...pts.map(p => p[0])), yMin: Math.min(...pts.map(p => p[1])), yMax: Math.max(...pts.map(p => p[1])) };
+  }
 
   symbolBounds(id, depth = 0) {
     const i = this.chars.get(id);
