@@ -41,11 +41,13 @@ export function compileCharacter(ch, templateBuffer, { compress = true } = {}) {
       for (const view of VIEWS) {
         const key = instanceName(part.id, view);
         if (!t.has(key) || ch.art[key]) continue;
-        const b = t.instanceBounds(key);
+        // draw in the symbol's own local space and keep the template's matrix, so the placeholder
+        // flips and rotates exactly like the template art does
+        const b = t.symbolBounds(t.placement(key).parsed.characterId);
         if (!b) continue;
         const [ox, oy] = t.position(key);
         const id = t.defineArt([{ d: roundedRectPath(b, ox, oy), ...FALLBACK_STYLE, ...FALLBACK_OVERRIDES[part.id] }], [ox, oy]);
-        t.place(key, id, [ox, oy], { scaleX: 1 });
+        t.place(key, id, [ox, oy]);
         report.fallback.push(key);
       }
     }

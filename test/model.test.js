@@ -59,6 +59,11 @@ test('compile: drawn + mirrored + fallback against the Billy template', { skip: 
   // reflection: K - x with K = 3009.6 for 45>315
   assert.ok(Math.abs(placed.Left_foot_315.matrix.tx / 20 - (3009.6 - placed.Right_foot_45.matrix.tx / 20)) < 0.1);
   assert.equal(placed.Neck_0.matrix.scaleX, 1);
+  // placeholders keep the template's matrix exactly (rotation + flip), art placements are clean
+  const orig = Object.fromEntries(readSwf(tpl).tags.filter(x => x.code === TAG.PlaceObject2).map(x => parsePlaceObject2(x.body)).filter(p => p.name).map(p => [p.name, p]));
+  for (const key of report.fallback) assert.deepEqual(placed[key].matrix, orig[key].matrix, key);
+  assert.ok(report.fallback.includes('Left_arm_45') && Math.abs(orig.Left_arm_45.matrix.skew0) > 0.5, 'rotated arm covered');
+  assert.deepEqual({ ...placed.Right_foot_45.matrix, tx: 0, ty: 0 }, { scaleX: 1, scaleY: 1, skew0: 0, skew1: 0, tx: 0, ty: 0 });
   // the hair placeholder must not be a solid fill (it would cover the eyes/brows beneath it)
   const { decodeShape } = await import('../src/swf/shapeDecode.js');
   const { parseDefineSprite } = await import('../src/swf/reader.js');

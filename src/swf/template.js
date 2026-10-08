@@ -51,7 +51,7 @@ export class TemplateSwf {
 
   /**
    * Point instance `name` at sprite `spriteId`, positioned at `origin` (stage px).
-   * Scale/skew sign of the template placement (mirroring) is kept unless `scaleX` is given. The matching pivot marker
+   * The template placement matrix (flip, rotation) is kept unless `scaleX` is given (then: clean identity / flip). The matching pivot marker
    * (`<name lowercased>_pivot`) is shifted by the same delta unless `pivot` ([x,y] px) is given.
    */
   place(name, spriteId, origin, { pivot, scaleX } = {}) {
@@ -60,7 +60,10 @@ export class TemplateSwf {
     const old = t.parsed.matrix;
     const nx = Math.round(origin[0] * PX), ny = Math.round(origin[1] * PX);
     const dx = nx - old.tx, dy = ny - old.ty;
-    t.parsed = { ...t.parsed, characterId: spriteId, matrix: { ...old, ...(scaleX !== undefined && { scaleX }), tx: nx, ty: ny } };
+    // scaleX given -> clean matrix (identity or pure horizontal flip; drops any template rotation/skew,
+    // right for art drawn at its final orientation). Omitted -> keep the template's full matrix (rotation, flip).
+    const matrix = scaleX !== undefined ? { scaleX, scaleY: 1, skew0: 0, skew1: 0, tx: nx, ty: ny } : { ...old, tx: nx, ty: ny };
+    t.parsed = { ...t.parsed, characterId: spriteId, matrix };
     t.body = placeBody(t.parsed);
     const pn = `${name.toLowerCase()}_pivot`;
     if (this.has(pn)) {

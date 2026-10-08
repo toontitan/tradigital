@@ -1,6 +1,6 @@
 // Pure scene logic shared by the stage and thumbnails: resolve slot art (incl. mirrors) and order by depth.
 import { MIRROR_VIEW, getPart, instanceName, mirrorOf, parseInstanceName } from '../../src/model/rig.js';
-import { reflectPath } from '../../src/svg/path.js';
+import { reflectPath, transformPath } from '../../src/svg/path.js';
 import { roundedRectPath } from '../../src/model/silhouette.js';
 
 /** Resolved art for a slot: {paths, origin, derived, source} or null. */
@@ -31,7 +31,11 @@ export function viewBounds(tpl, view, pad = 30) {
   return b ? { x: b.x0 - pad, y: b.y0 - pad, w: b.x1 - b.x0 + 2 * pad, h: b.y1 - b.y0 + 2 * pad } : { x: 0, y: 0, w: 100, h: 100 };
 }
 
-export const silhouetteD = (slot) => roundedRectPath(slot.bounds, slot.origin[0], slot.origin[1]);
+/** Placeholder outline as it appears on stage: local rounded rect through the instance's own matrix. */
+export function silhouetteD(slot) {
+  const [a, b, c, d] = slot.matrix ?? [1, 0, 0, 1], [ox, oy] = slot.origin;
+  return transformPath(roundedRectPath(slot.localBounds ?? slot.bounds, 0, 0), ([x, y]) => [ox + a * x + c * y, oy + b * x + d * y]);
+}
 
 /** Items to draw for a view, back to front. */
 export function viewScene(art, tpl, view) {
