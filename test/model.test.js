@@ -59,4 +59,13 @@ test('compile: drawn + mirrored + fallback against the Billy template', { skip: 
   // reflection: K - x with K = 3009.6 for 45>315
   assert.ok(Math.abs(placed.Left_foot_315.matrix.tx / 20 - (3009.6 - placed.Right_foot_45.matrix.tx / 20)) < 0.1);
   assert.equal(placed.Neck_0.matrix.scaleX, 1);
+  // the hair placeholder must not be a solid fill (it would cover the eyes/brows beneath it)
+  const { decodeShape } = await import('../src/swf/shapeDecode.js');
+  const { parseDefineSprite } = await import('../src/swf/reader.js');
+  const out = readSwf(swf);
+  const sprite = out.tags.find(x => x.code === TAG.DefineSprite && x.body.readUInt16LE(0) === placed.Front_hair_0.characterId);
+  const child = parseDefineSprite(sprite.body).tags.filter(x => x.code === TAG.PlaceObject2).map(x => parsePlaceObject2(x.body))[0];
+  const shape = decodeShape(TAG.DefineShape4, out.tags.find(x => x.code === TAG.DefineShape4 && x.body.readUInt16LE(0) === child.characterId).body);
+  assert.equal(shape.fills.length, 0, 'Front_hair fallback is outline-only');
+  assert.equal(shape.lines.length, 1);
 });

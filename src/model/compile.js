@@ -7,6 +7,8 @@ import { validate } from './character.js';
 import { roundedRectPath } from './silhouette.js';
 
 export const FALLBACK_STYLE = { fill: '#d4d4d4', stroke: '#8c8c8c', strokeWidth: 2 };
+// Front hair sits above the eyes/brows in the template's z-order; a solid block would hide them, so it is outline-only.
+export const FALLBACK_OVERRIDES = { Front_hair: { fill: 'none' } };
 
 /** @returns {{swf:Buffer, report:{drawn:string[], mirrored:string[], fallback:string[], warnings:string[]}}} */
 export function compileCharacter(ch, templateBuffer, { compress = true } = {}) {
@@ -42,7 +44,7 @@ export function compileCharacter(ch, templateBuffer, { compress = true } = {}) {
         const b = t.instanceBounds(key);
         if (!b) continue;
         const [ox, oy] = t.position(key);
-        const id = t.defineArt([{ d: roundedRectPath(b, ox, oy), ...FALLBACK_STYLE }], [ox, oy]);
+        const id = t.defineArt([{ d: roundedRectPath(b, ox, oy), ...FALLBACK_STYLE, ...FALLBACK_OVERRIDES[part.id] }], [ox, oy]);
         t.place(key, id, [ox, oy], { scaleX: 1 });
         report.fallback.push(key);
       }
