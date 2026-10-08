@@ -49,7 +49,7 @@ test('compile: drawn + mirrored + fallback against the Billy template', { skip: 
   ch = setArt(ch, 'Left_foot', '315', { mirrorOf: 'Right_foot_45' });
   ch = setArt(ch, 'Right_forearm', '0', { origin: [196.7, 356.6], paths: [{ d: 'M196,350L120,358', fill: 'none', stroke: '#000', strokeWidth: 3 }] });
   const { swf, report } = compileCharacter(ch, tpl);
-  assert.ok(report.warnings.some(w => /Right_forearm_0: stroke-only path widened from 3px to 4px/.test(w)));
+  assert.deepEqual(report.warnings.filter(w => /stroke/.test(w)), []);
   assert.deepEqual(report.drawn.sort(), ['Right_foot_45', 'Right_forearm_0']);
   assert.deepEqual(report.mirrored, ['Left_foot_315']);
   assert.ok(report.fallback.length > 150, `fallback ${report.fallback.length}`);
@@ -66,6 +66,15 @@ test('compile: drawn + mirrored + fallback against the Billy template', { skip: 
   for (const key of report.fallback) assert.deepEqual(placed[key].matrix, orig[key].matrix, key);
   assert.ok(report.fallback.includes('Left_arm_45') && Math.abs(orig.Left_arm_45.matrix.skew0) > 0.5, 'rotated arm covered');
   assert.deepEqual({ ...placed.Right_foot_45.matrix, tx: 0, ty: 0 }, { scaleX: 1, scaleY: 1, skew0: 0, skew1: 0, tx: 0, ty: 0 });
-  // minimum thickness for stroke-only paths is reported
-  assert.ok(Array.isArray(report.warnings));
+  // strokes are exported as filled geometry: no line styles anywhere in the drawn slots
+  const { decodeShape } = await import('../src/swf/shapeDecode.js');
+  const { parseDefineSprite } = await import('../src/swf/reader.js');
+  const out2 = readSwf(swf);
+  const sprite = out2.tags.find(x => x.code === TAG.DefineSprite && x.body.readUInt16LE(0) === placed.Right_forearm_0.characterId);
+  const shapes = parseDefineSprite(sprite.body).tags.filter(x => x.code === TAG.PlaceObject2).map(x => decodeShape(TAG.DefineShape4, out2.tags.find(s => s.code === TAG.DefineShape4 && s.body.readUInt16LE(0) === parsePlaceObject2(x.body).characterId).body));
+  assert.equal(shapes.length, 1, 'stroke-only path becomes one filled outline');
+  assert.equal(shapes[0].lines.length, 0);
+  assert.deepEqual(shapes[0].fills[0].color, [0, 0, 0, 255]);
+  const b = shapes[0].bounds; // 3px stroke along a ~77px line: about 80 x 6 px
+  assert.ok((b.xMax - b.xMin) / 20 > 76 && (b.yMax - b.yMin) / 20 < 12, JSON.stringify(b));
 });

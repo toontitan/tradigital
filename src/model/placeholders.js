@@ -13,7 +13,7 @@ export const isLimb = (id) => !!side(id) && base(id) in LIMB_CHILD;
 export const EDGE = 3; // outline thickness (px) - thick enough to stay visible when the actor is scaled down
 export const STYLE = {
   body: { fill: '#d4d4d4', stroke: '#8c8c8c', strokeWidth: EDGE },
-  limb: { fill: '#d0d0d0' }, // fill only; the outline is added as separate filled strips so no line crosses a joint
+  limb: { fill: '#c6c6c6' }, // fill only; the outline is added as separate filled strips so no line crosses a joint
   edge: { fill: '#8c8c8c' },
   // large pieces drawn above other parts: translucent so what is behind them stays visible
   translucent: { Upper_torso: '#d4d4d48c', Lower_torso: '#d4d4d48c' },

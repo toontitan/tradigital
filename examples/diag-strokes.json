@@ -2,8 +2,7 @@
   "name": "Diag_Strokes",
   "rigVersion": "2.0",
   "options": {
-    "fallback": true,
-    "minStrokeOnly": 0
+    "fallback": true
   },
   "art": {
     "Right_forearm_0": {
