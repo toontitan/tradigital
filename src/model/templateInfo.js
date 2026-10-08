@@ -1,6 +1,7 @@
 // JSON description of a template for the editor: slot geometry, depth order, reflection constants.
 import { PARTS, VIEWS, instanceName, pivotName } from './rig.js';
 import { deriveReflections } from './reflect.js';
+import { placeholderFor } from './placeholders.js';
 
 export function describeTemplate(t) {
   const slots = {};
@@ -14,7 +15,7 @@ export function describeTemplate(t) {
     slots[key] = {
       part: part.id, view, kind: part.kind, origin: t.position(key), bounds, localBounds: local,
       matrix: [m.scaleX, m.skew0, m.skew1, m.scaleY], // x' = a*x + c*y, y' = b*x + d*y (a,b,c,d)
-      flipped: m.scaleX < 0, depth: pl.depth, pivot: pv,
+      flipped: m.scaleX < 0, depth: pl.depth, pivot: pv, placeholder: placeholderFor(t, part.id, view),
     };
   }
   const { xMax, yMax } = t.swf.frameSize;

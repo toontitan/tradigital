@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import paper from 'paper';
 import { useStore } from './store.js';
-import { resolveSlot, viewBounds, viewScene, silhouetteD } from './scene.js';
+import { resolveSlot, viewBounds, viewScene, placeholderItems, jointCircles } from './scene.js';
 
 const DIM = 0.28;
 const S = () => useStore.getState();
@@ -179,17 +179,22 @@ export default function Stage() {
       if (it.key === activeKey) continue;
       if (it.drawn) { for (const p of it.resolved.paths) { const i = makeItem(p.d, L.ctx); styleItem(i, p); i.opacity = dim * 1.6 > 1 ? 1 : dim * 1.6; i.locked = true; } }
       else {
-        const i = makeItem(it.silhouette, L.ctx);
-        i.fillColor = '#e4e4e4'; i.strokeColor = '#bdbdbd'; i.strokeWidth = 1; i.opacity = 0.55; i.locked = true;
-        if (it.slot.kind === 'expression') i.dashArray = [4, 3];
+        for (const ph of placeholderItems(it.slot)) {
+          const i = makeItem(ph.d, L.ctx);
+          i.fillColor = ph.filled ? '#e4e4e4' : null; i.strokeColor = ph.filled && it.slot.kind !== 'expression' && !ph.translucent && !/^(Left|Right)_(arm|forearm|thigh|shank|foot)$/i.test(it.slot.part) ? '#bdbdbd' : '#c9c9c9';
+          i.strokeWidth = 1; i.opacity = ph.translucent ? 0.4 : 0.55; i.locked = true;
+          if (it.slot.kind === 'expression') i.dashArray = [4, 3];
+        }
       }
     }
     const slot = template.slots[activeKey];
     if (slot) {
       const res = resolveSlot(art, template, activeKey);
       if (!res || !res.paths.length) {
-        const sil = makeItem(silhouetteD(slot), L.ghost);
-        sil.strokeColor = '#3b82f6'; sil.strokeWidth = 1.5; sil.dashArray = [5, 4]; sil.fillColor = new paper.Color(0.23, 0.51, 0.96, 0.06); sil.locked = true;
+        for (const ph of placeholderItems(slot)) {
+          const sil = makeItem(ph.d, L.ghost);
+          sil.strokeColor = '#3b82f6'; sil.strokeWidth = 1.5; sil.dashArray = [5, 4]; sil.fillColor = new paper.Color(0.23, 0.51, 0.96, 0.06); sil.locked = true;
+        }
       }
       if (res) {
         const layer = res.derived ? L.ghost : L.active;
@@ -199,6 +204,7 @@ export default function Stage() {
       const mark = (pt, col, r) => { const c = new paper.Path.Circle({ center: pt, radius: r, strokeColor: col, strokeWidth: 1.5, fillColor: 'white', parent: L.ui, locked: true }); c.applyMatrix = true; };
       new paper.Path.Line({ from: [ox - 8, oy], to: [ox + 8, oy], strokeColor: '#e11d48', strokeWidth: 1, parent: L.ui, locked: true });
       new paper.Path.Line({ from: [ox, oy - 8], to: [ox, oy + 8], strokeColor: '#e11d48', strokeWidth: 1, parent: L.ui, locked: true });
+      for (const j of jointCircles(slot)) new paper.Path.Circle({ center: j.c, radius: j.r, strokeColor: '#f59e0b', strokeWidth: 1.2, dashArray: [3, 3], parent: L.ui, locked: true });
       if (slot.pivot) mark(slot.pivot, '#16a34a', 3.5);
     }
     L.active.activate();
