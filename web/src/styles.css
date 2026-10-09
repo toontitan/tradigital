@@ -55,3 +55,4 @@ kbd { font: 10px ui-monospace, monospace; opacity: .7; }
 .color .bar { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 0; } .color .bar .ccell { border-radius: 0; }
 .color .pal { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; } .color h5 { margin: 10px 0 4px; color: var(--mute); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; } .color h5 small { text-transform: none; letter-spacing: 0; }
 .ball { display: block; width: 170px; height: 170px; margin: 8px auto 2px; } .ball .zone { cursor: pointer; } .ball .zone:hover { filter: brightness(1.12); }
+.filebtn { display:inline-block; font:inherit; background: var(--panel); border:1px solid var(--line); border-radius:6px; padding:4px 10px; cursor:pointer; }

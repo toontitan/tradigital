@@ -6,7 +6,7 @@ export const BANDING_PRESETS = [
 export const WHEEL_HUE_ROTATION = 60;
 export const MIDTONE_BANDS = 9, MIDTONE_CENTER = 4;
 export const MUTE_MAX_MIX = 0.4;
-export const DEFAULT_SHADER = { baseColor: '#227093', shade: 12, highlight: 10, outline: -24, hue: 0, chroma: 0 };
+export const DEFAULT_SHADER = { baseColor: '#a6a6a6', shade: 12, highlight: 10, outline: -24, hue: 0, chroma: 0 };
 
 export function hexToRgb(h) { return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]; }
 export function rgbToHex(r, g, b) { const x = n => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0'); return `#${x(r)}${x(g)}${x(b)}`; }

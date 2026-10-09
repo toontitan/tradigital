@@ -21,7 +21,7 @@ const save = (ch) => { try { localStorage.setItem(KEY, JSON.stringify(ch)); } ca
 export const useStore = create((set, get) => ({
   template: null, rigData: null, error: null, character: load(),
   view: '0', part: 'Right_arm', tool: 'pen', selIdx: null,
-  style: { fill: '#e03030', stroke: '#000000', strokeWidth: 4, filled: true, stroked: true },
+  style: { fill: '#a6a6a6', stroke: '#4d4d4d', strokeWidth: 4, filled: true, stroked: true },
   shader: { ...DEFAULT_SHADER, ...jget('tradigital.shader', {}) }, palette: jget('tradigital.palette', Array(12).fill(null)), colorTarget: 'fill',
   undo: [], redo: [],
 

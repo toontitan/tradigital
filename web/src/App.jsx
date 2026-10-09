@@ -33,6 +33,9 @@ function ViewThumb({ view }) {
 const JOINT_LABEL = { shoulder: 'Shoulders', elbow: 'Elbows', wrist: 'Wrists', hip: 'Hips', knee: 'Knees', ankle: 'Ankles', waist: 'Waist', neck_base: 'Neck base', neck_top: 'Neck top (head)' };
 const PRESETS = {
   default: { label: 'Default (as loaded)', bones: {} },
+  realistic: { label: 'Body: Realistic', bones: { torso: 1.1, neck: 1.0, shoulders: 1.1, hips: 1.0, upper_arm: 1.1, forearm: 1.1, thigh: 1.3, shank: 1.3 }, joints: { shoulder: 18, elbow: 13, wrist: 9, hip: 20, knee: 15, ankle: 10 } },
+  comic: { label: 'Body: Comic / semi-realistic', bones: { torso: 1.1, neck: 0.95, shoulders: 1.2, hips: 1.05, upper_arm: 1.05, forearm: 1.05, thigh: 1.15, shank: 1.15 } },
+  anime: { label: 'Body: Anime', bones: { torso: 1.0, neck: 0.9, shoulders: 0.9, hips: 0.95, upper_arm: 1.1, forearm: 1.1, thigh: 1.35, shank: 1.35 }, joints: { shoulder: 16, elbow: 12, wrist: 8, hip: 18, knee: 13, ankle: 9 } },
   longLimbs: { label: 'Long limbs', bones: { upper_arm: 1.25, forearm: 1.25, thigh: 1.25, shank: 1.25 } },
   shortLimbs: { label: 'Short limbs', bones: { upper_arm: 0.8, forearm: 0.8, thigh: 0.8, shank: 0.8 } },
   longTorso: { label: 'Long torso & neck', bones: { torso: 1.25, neck: 1.3 } },
@@ -46,7 +49,8 @@ function Proportions() {
   const changed = Object.keys(bones).length + Object.keys(joints).length;
   const applyPreset = (id) => {
     const keys = Object.fromEntries(Object.keys(BONES).map(k => [k, null]));
-    setSkeleton({ bones: { ...keys, ...PRESETS[id].bones } });
+    const jkeys = Object.fromEntries(JOINTS.map(k => [k, null]));
+    setSkeleton({ bones: { ...keys, ...PRESETS[id].bones }, joints: { ...jkeys, ...(PRESETS[id].joints ?? {}) } });
   };
   return (
     <details className="props" open>
@@ -78,7 +82,12 @@ function Proportions() {
           </label>
         ))}
       </div>
-      <button onClick={reset} disabled={!changed} data-act="reset-proportions">Reset proportions</button>
+      <button onClick={reset} disabled={!changed} data-act="reset-proportions">Reset proportions</button>{' '}
+      <button onClick={() => Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([JSON.stringify({ skeleton: skeleton ?? { bones: {}, joints: {} } }, null, 1)], { type: 'application/json' })), download: 'skeleton.json' }).click()} data-act="save-skeleton" title="Share this exact skeleton with whoever finishes the final characters">Save skeleton</button>{' '}
+      <label className="filebtn">Load skeleton<input type="file" accept=".json" hidden data-act="load-skeleton" onChange={async e => {
+        const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+        try { const j = JSON.parse(await f.text()), sk = j.skeleton ?? j; setSkeleton({ bones: { ...Object.fromEntries(Object.keys(BONES).map(k => [k, null])), ...(sk.bones ?? {}) }, joints: { ...Object.fromEntries(JOINTS.map(k => [k, null])), ...(sk.joints ?? {}) } }); } catch { alert('Not a skeleton file'); }
+      }} /></label>
     </details>
   );
 }
