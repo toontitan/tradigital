@@ -33,6 +33,12 @@ export class TemplateSwf {
   }
 
   has(name) { return this.byName.has(name); }
+
+  // --- geometry interface shared with Rig (src/rig/rig.js): everything placeholders/reflections/editor need ---
+  matrix(name) { return { scaleX: 1, scaleY: 1, skew0: 0, skew1: 0, ...(this.placement(name).parsed.matrix || {}) }; }
+  localBounds(name) { return this.symbolBounds(this.placement(name).parsed.characterId); }
+  depth(name) { return this.placement(name).parsed.depth; }
+  stageSize() { const f = this.swf.frameSize; return { width: (f.xMax - f.xMin) / PX, height: (f.yMax - f.yMin) / PX }; }
   placement(name) { const i = this.byName.get(name); if (i === undefined) throw new Error(`no instance named ${name}`); return this.tags[i]; }
   position(name) { const m = this.placement(name).parsed.matrix; return [m.tx / PX, m.ty / PX]; }
 

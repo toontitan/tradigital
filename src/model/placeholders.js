@@ -51,19 +51,19 @@ const circlePath = (c, r) => `M${c[0] - r},${c[1]}A${r},${r} 0 1 1 ${c[0] + r},$
 
 /** Position of `child`'s origin expressed in `parent`'s local space (inverse of the parent's 2x2 matrix). */
 function toLocal(t, parentKey, childKey) {
-  const m = t.placement(parentKey).parsed.matrix, [px, py] = t.position(parentKey), [cx, cy] = t.position(childKey);
+  const m = t.matrix(parentKey), [px, py] = t.position(parentKey), [cx, cy] = t.position(childKey);
   const a = m.scaleX, b = m.skew0, c = m.skew1, d = m.scaleY, det = a * d - b * c, dx = cx - px, dy = cy - py;
   return [(d * dx - c * dy) / det, (-b * dx + a * dy) / det];
 }
 
 function thickness(t, key) {
-  const b = t.symbolBounds(t.placement(key).parsed.characterId);
+  const b = t.localBounds(key);
   return b ? Math.min(b.xMax - b.xMin, b.yMax - b.yMin) : 30;
 }
 
 /** Point given in stage px -> a slot's local space (inverse of its 2x2 matrix + origin). */
 function stageToLocal(t, key, [sx, sy]) {
-  const m = t.placement(key).parsed.matrix, [ox, oy] = t.position(key);
+  const m = t.matrix(key), [ox, oy] = t.position(key);
   const a = m.scaleX, b = m.skew0, c = m.skew1, d = m.scaleY, det = a * d - b * c, dx = sx - ox, dy = sy - oy;
   return [(d * dx - c * dy) / det, (-b * dx + a * dy) / det];
 }
@@ -73,7 +73,7 @@ function stageToLocal(t, key, [sx, sy]) {
  * Worked out in on-screen terms (views such as 'bottom' flip the hair vertically), then mapped to local space.
  */
 function hairCapBounds(t, view, b) {
-  const key = instanceName('Front_hair', view), m = t.placement(key).parsed.matrix, vb = t.instanceBounds(key), oy = t.position(key)[1];
+  const key = instanceName('Front_hair', view), m = t.matrix(key), vb = t.instanceBounds(key), oy = t.position(key)[1];
   if (Math.abs(m.skew0) > 1e-3 || Math.abs(m.skew1) > 1e-3 || Math.abs(m.scaleY) < 1e-3) return { xMin: b.xMin, xMax: b.xMax, yMin: b.yMin, yMax: b.yMin + (b.yMax - b.yMin) * 0.35 };
   let bottom = vb.yMin + (vb.yMax - vb.yMin) * 0.35; // on-screen, relative to the hair origin
   for (const brow of ['Left_brow', 'Right_brow']) {
@@ -107,7 +107,7 @@ export function limbGeometry(t, part, view) {
  * @returns {{paths:{d:string,fill:string,stroke?:string,strokeWidth?:number}[], joints:{c:number[],r:number}[]}}
  */
 export function placeholderFor(t, part, view) {
-  const key = instanceName(part, view), b = t.symbolBounds(t.placement(key).parsed.characterId);
+  const key = instanceName(part, view), b = t.localBounds(key);
   if (!b) return null;
   if (isLimb(part)) {
     const g = limbGeometry(t, part, view), joints = [{ c: g.c0, r: g.r0 }];
