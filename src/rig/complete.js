@@ -22,6 +22,8 @@ const bodyHeight = (d) => Math.abs(d.slots.Left_foot_0.origin[1] - d.slots.Face_
  * @returns {{data:object, filled:Record<string,string>}}
  */
 export function completeRig(data, donors = []) {
+  const complete = VIEWS.every(v => EXPECTED_PARTS[v].every(p => data.slots[instanceName(p, v)]));
+  if (complete) return { data, filled: [] }; // nothing to add: leave the rig exactly as it is
   const out = JSON.parse(JSON.stringify(data));
   const filled = { ...(out.filled ?? {}) };
   const refl = deriveReflections(new Rig(out));

@@ -4,12 +4,13 @@ import fs from 'node:fs';
 import { completeRig } from '../src/rig/complete.js';
 import { EXPECTED_PARTS } from '../src/rig/spec.js';
 import { VIEWS } from '../src/model/rig.js';
+import { rigNames, readRaw, readRig } from '../src/rig/library.js';
 
 const rig = (n) => JSON.parse(fs.readFileSync(new URL(`../src/rig/rigs/${n}.json`, import.meta.url), 'utf8'));
 
-test('every built-in rig has every part CTA expects in every view, with pivots', () => {
-  for (const n of ['mojo', 'kevin', 'billy3', 'guru']) {
-    const d = rig(n);
+test('every built-in rig, as stored AND as loaded, has every part CTA expects in every view, with pivots', () => {
+  assert.ok(rigNames().length >= 4);
+  for (const n of rigNames()) for (const d of [readRaw(n), readRig(n)]) {
     for (const v of VIEWS) for (const p of EXPECTED_PARTS[v]) {
       assert.ok(d.slots[`${p}_${v}`], `${n} ${p}_${v}`);
       assert.ok(d.pivots[`${p}_${v}`.toLowerCase() + '_pivot'], `${n} pivot ${p}_${v}`);

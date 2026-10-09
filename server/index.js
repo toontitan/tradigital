@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Rig } from '../src/rig/rig.js';
 import { extractRig } from '../src/rig/extract.js';
+import { complete, readRig, rigNames } from '../src/rig/library.js';
 import { describeTemplate } from '../src/model/templateInfo.js';
 import { compileFromRig } from '../src/model/compile-rig.js';
 
@@ -15,11 +16,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export function loadRig({ templatePath = process.env.TEMPLATE_SWF, rigName = process.env.RIG ?? 'mojo' } = {}) {
   if (templatePath) {
     if (!fs.existsSync(templatePath)) throw new Error(`template SWF not found at ${templatePath}`);
-    return new Rig(extractRig(fs.readFileSync(templatePath), path.basename(templatePath)));
+    return new Rig(complete(extractRig(fs.readFileSync(templatePath), path.basename(templatePath))).data);
   }
-  const file = path.join(root, 'src/rig/rigs', `${rigName}.json`);
-  if (!fs.existsSync(file)) throw new Error(`no built-in rig named ${rigName}`);
-  return new Rig(JSON.parse(fs.readFileSync(file, 'utf8')));
+  if (!rigNames().includes(rigName)) throw new Error(`no built-in rig named ${rigName}`);
+  return new Rig(readRig(rigName));
 }
 
 export function createApp(rigOptions) {
@@ -32,7 +32,7 @@ export function createApp(rigOptions) {
     if (!rigs.has(key)) { const rig = loadRig({ ...rigOptions, ...(name ? { rigName: name, templatePath: undefined } : {}) }); rigs.set(key, { rig, info: { ...describeTemplate(rig), rig: rig.name } }); }
     return rigs.get(key);
   };
-  app.get('/api/rigs', (req, res) => res.json(fs.readdirSync(path.join(root, 'src/rig/rigs')).filter(f => f.endsWith('.json')).map(f => f.slice(0, -5)).sort()));
+  app.get('/api/rigs', (req, res) => res.json(rigNames()));
   app.get('/api/template', (req, res) => { try { res.json(load(nameOf(req.query.rig)).info); } catch (e) { res.status(500).json({ error: e.message }); } });
   app.get('/api/rig', (req, res) => { try { res.json(load(nameOf(req.query.rig)).rig.data); } catch (e) { res.status(500).json({ error: e.message }); } });
   app.post('/api/export', (req, res) => {

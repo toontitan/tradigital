@@ -2,6 +2,7 @@
 // Builds a SWF with no template file, from the built-in rig. character.json may be {} for an all-placeholder character.
 import fs from 'node:fs';
 import { Rig } from '../src/rig/rig.js';
+import { readRig } from '../src/rig/library.js';
 import { compileFromRig, DRAWN_VIEWS } from '../src/model/compile-rig.js';
 import { createCharacter } from '../src/model/character.js';
 
@@ -12,7 +13,7 @@ if (!input || !output) { console.error('usage: build-from-rig <character.json> <
 const ch = { ...createCharacter(), ...JSON.parse(fs.readFileSync(input, 'utf8')) };
 const rigName = flag('--rig', ch.rig ?? 'mojo');
 if (!/^[\w-]+$/.test(rigName)) throw new Error('bad rig name');
-const rig = new Rig(JSON.parse(fs.readFileSync(new URL(`../src/rig/rigs/${rigName}.json`, import.meta.url))));
+const rig = new Rig(readRig(rigName));
 const views = flag('--views', 'all') === 'seven' ? DRAWN_VIEWS : undefined;
 const { swf, report } = compileFromRig(ch, rig, { views });
 fs.writeFileSync(output, swf);
