@@ -6,9 +6,7 @@ import { deriveReflections, reflectPoint } from './reflect.js';
 import { validate } from './character.js';
 import { placeholderFor } from './placeholders.js';
 import { transformPath } from '../svg/path.js';
-import { strokeToFill } from '../svg/stroke.js';
-
-const MIN_STROKE = 1; // px: thinner strokes are widened so they keep some area
+import { expandStrokes } from './strokes.js';
 
 /** @returns {{swf:Buffer, report:{drawn:string[], mirrored:string[], fallback:string[], warnings:string[]}}} */
 export function compileCharacter(ch, templateBuffer, { compress = true } = {}) {
@@ -19,14 +17,7 @@ export function compileCharacter(ch, templateBuffer, { compress = true } = {}) {
   const report = { drawn: [], mirrored: [], fallback: [], warnings };
   const sprites = new Map(); // drawn key -> {id, origin}
 
-  // Cartoon Animator drops stroke-only SWF shapes (any width), so every stroke is exported as filled geometry:
-  // the fill (if any) first, then the stroke's outline filled with the stroke colour on top.
-  const expand = (paths, key) => paths.flatMap((p) => {
-    if (!p.stroke || p.stroke === 'none' || !((p.strokeWidth ?? 1) > 0)) return [{ ...p, stroke: 'none' }];
-    const outline = strokeToFill(p.d, Math.max(p.strokeWidth ?? 1, MIN_STROKE));
-    if (!outline) { warnings.push(`${key}: a stroke could not be converted and was skipped`); return p.fill && p.fill !== 'none' ? [{ ...p, stroke: 'none' }] : []; }
-    return [...(p.fill && p.fill !== 'none' ? [{ ...p, stroke: 'none' }] : []), { d: outline, fill: p.stroke, stroke: 'none', opacity: p.opacity }];
-  });
+  const expand = (paths, key) => expandStrokes(paths, key, warnings);
   for (const [key, a] of Object.entries(ch.art)) {
     if (a.mirrorOf) continue;
     const id = t.defineArt(expand(a.paths, key), a.origin);
