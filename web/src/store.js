@@ -2,25 +2,46 @@ import { create } from 'zustand';
 import { createCharacter } from '../../src/model/character.js';
 import { instanceName, PARTS } from '../../src/model/rig.js';
 import { resolveSlot, partnerKey } from './scene.js';
+import { Rig } from '../../src/rig/rig.js';
+import { applyProportions } from '../../src/rig/proportions.js';
+import { describeTemplate } from '../../src/model/templateInfo.js';
+import { anchorShift } from './scene.js';
+
+/** Editor geometry for a rig with the character's proportions applied. */
+export const computeTemplate = (rigData, skeleton) => describeTemplate(new Rig(skeleton ? applyProportions(rigData, skeleton) : rigData));
 
 const KEY = 'tradigital.character.v1';
 const load = () => { try { const s = JSON.parse(localStorage.getItem(KEY)); if (s?.art) return s; } catch { /* no saved doc */ } return createCharacter(); };
 const save = (ch) => { try { localStorage.setItem(KEY, JSON.stringify(ch)); } catch { /* storage unavailable */ } };
 
 export const useStore = create((set, get) => ({
-  template: null, error: null, character: load(),
+  template: null, rigData: null, error: null, character: load(),
   view: '0', part: 'Right_arm', tool: 'pen', selIdx: null,
   style: { fill: '#e03030', stroke: '#000000', strokeWidth: 4, filled: true, stroked: true },
   undo: [], redo: [],
 
   async loadTemplate() {
     try {
-      const r = await fetch('/api/template');
+      const r = await fetch('/api/rig');
       const j = await r.json();
       if (!r.ok) throw new Error(j.error);
-      set({ template: j, error: null });
+      set({ rigData: j, template: computeTemplate(j, get().character.skeleton), error: null });
     } catch (e) { set({ error: e.message }); }
   },
+
+  /** Change bone lengths / joint radii. patch = {bones?:{}, joints?:{}}; a null value resets that entry. */
+  setSkeleton(patch) {
+    const { character, rigData } = get();
+    const cur = character.skeleton ?? { bones: {}, joints: {} };
+    const merge = (a, b) => { const o = { ...a, ...(b ?? {}) }; for (const k of Object.keys(o)) if (o[k] === null) delete o[k]; return o; };
+    const skeleton = { bones: merge(cur.bones, patch.bones), joints: merge(cur.joints, patch.joints) };
+    const empty = !Object.keys(skeleton.bones).length && !Object.keys(skeleton.joints).length;
+    const next = { ...character };
+    if (empty) delete next.skeleton; else next.skeleton = skeleton;
+    save(next);
+    set({ character: next, template: computeTemplate(rigData, next.skeleton) });
+  },
+  resetSkeleton() { get().setSkeleton({ bones: Object.fromEntries(Object.keys(get().character.skeleton?.bones ?? {}).map(k => [k, null])), joints: Object.fromEntries(Object.keys(get().character.skeleton?.joints ?? {}).map(k => [k, null])) }); },
 
   setView: (view) => set({ view, selIdx: null }),
   setPart: (part) => set({ part, selIdx: null }),
@@ -56,7 +77,8 @@ export const useStore = create((set, get) => ({
   editPaths(fn) {
     const { template, character } = get(), key = get().key();
     if (character.art[key]?.mirrorOf) return;
-    const cur = character.art[key] ?? { origin: template.slots[key].origin, paths: [] };
+    const stored = character.art[key];
+    const cur = stored ? anchorShift(stored, template.slots[key]) : { origin: template.slots[key].origin, paths: [] }; // art follows its joint
     const paths = fn(cur.paths ?? []);
     const art = { ...character.art };
     if (paths.length) art[key] = { ...cur, paths };

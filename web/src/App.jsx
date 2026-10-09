@@ -4,6 +4,10 @@ import { useStore, PART_GROUPS } from './store.js';
 import { VIEWS, instanceName, getPart } from '../../src/model/rig.js';
 import { viewScene, viewBounds, slotStatus, partnerKey, screenSide } from './scene.js';
 import { validate } from '../../src/model/character.js';
+import { BONES, JOINTS, applyProportions } from '../../src/rig/proportions.js';
+import { Rig } from '../../src/rig/rig.js';
+import { bodyJointRadius } from '../../src/model/placeholders.js';
+import { useMemo } from 'react';
 
 const VIEW_LABEL = { 0: 'Front 0°', 45: '45°', 90: 'Side 90°', 135: '135°', 180: 'Back 180°', 225: '225°', 270: 'Side 270°', 315: '315°', top: 'Top', bottom: 'Bottom' };
 const TOOLS = [['select', 'Select / Anchor', 'V'], ['pen', 'Pen', 'P'], ['brush', 'Brush', 'B'], ['eraser', 'Eraser', 'E'], ['fill', 'Fill', 'G']];
@@ -22,6 +26,59 @@ function ViewThumb({ view }) {
       </svg>
       <span>{VIEW_LABEL[view]}{drawn ? <b> · {drawn}</b> : null}</span>
     </button>
+  );
+}
+
+const JOINT_LABEL = { shoulder: 'Shoulders', elbow: 'Elbows', wrist: 'Wrists', hip: 'Hips', knee: 'Knees', ankle: 'Ankles', waist: 'Waist', neck_base: 'Neck base', neck_top: 'Neck top (head)' };
+const PRESETS = {
+  default: { label: 'Default (as loaded)', bones: {} },
+  longLimbs: { label: 'Long limbs', bones: { upper_arm: 1.25, forearm: 1.25, thigh: 1.25, shank: 1.25 } },
+  shortLimbs: { label: 'Short limbs', bones: { upper_arm: 0.8, forearm: 0.8, thigh: 0.8, shank: 0.8 } },
+  longTorso: { label: 'Long torso & neck', bones: { torso: 1.25, neck: 1.3 } },
+  broad: { label: 'Broad shoulders & hips', bones: { shoulders: 1.3, hips: 1.25 } },
+};
+
+function Proportions() {
+  const rigData = useStore(s => s.rigData), skeleton = useStore(s => s.character.skeleton), setSkeleton = useStore(s => s.setSkeleton), reset = useStore(s => s.resetSkeleton);
+  const bones = skeleton?.bones ?? {}, joints = skeleton?.joints ?? {};
+  const eff = useMemo(() => new Rig(applyProportions(rigData, skeleton)), [rigData, skeleton]);
+  const changed = Object.keys(bones).length + Object.keys(joints).length;
+  const applyPreset = (id) => {
+    const keys = Object.fromEntries(Object.keys(BONES).map(k => [k, null]));
+    setSkeleton({ bones: { ...keys, ...PRESETS[id].bones } });
+  };
+  return (
+    <details className="props" open>
+      <summary>Proportions {changed ? <em>· {changed} changed</em> : null}</summary>
+      <p className="hint2">Bone lengths apply to every view at once and keep each angle's foreshortening. Anything you drew stays attached to its joint.</p>
+      <label className="row">Preset
+        <select onChange={e => { applyPreset(e.target.value); e.target.value = 'default'; }} defaultValue="default" data-act="preset">
+          {Object.entries(PRESETS).map(([id, p]) => <option key={id} value={id}>{p.label}</option>)}
+        </select>
+      </label>
+      {Object.entries(BONES).map(([name, b]) => (
+        <label className="row bone" key={name} title="double-click to reset">
+          <span>{b.label}</span>
+          <input type="range" min="0.5" max="2" step="0.05" value={bones[name] ?? 1} data-bone={name}
+            onChange={e => setSkeleton({ bones: { [name]: +e.target.value === 1 ? null : +e.target.value } })}
+            onDoubleClick={() => setSkeleton({ bones: { [name]: null } })} />
+          <output>×{(bones[name] ?? 1).toFixed(2)}</output>
+        </label>
+      ))}
+      <h4>Joint size</h4>
+      <p className="hint2">One circle per joint: both neighbouring sprites use exactly this radius.</p>
+      <div className="joints">
+        {JOINTS.map(name => (
+          <label key={name} className="jrow">
+            <span>{JOINT_LABEL[name]}</span>
+            <input type="number" min="2" max="200" step="1" placeholder={String(Math.round(bodyJointRadius(eff, name, /shoulder|hip|elbow|wrist|knee|ankle/.test(name) ? 'Left_' : '')))}
+              value={joints[name] ?? ''} data-joint={name}
+              onChange={e => setSkeleton({ joints: { [name]: e.target.value === '' ? null : Math.max(2, +e.target.value) } })} />
+          </label>
+        ))}
+      </div>
+      <button onClick={reset} disabled={!changed} data-act="reset-proportions">Reset proportions</button>
+    </details>
   );
 }
 
@@ -145,7 +202,7 @@ export default function App() {
         <Parts />
       </aside>
       <main><Stage /><div className="hint">wheel = zoom · space/middle-drag = pan · Enter finishes a pen path · Del removes · Ctrl+Z undo</div></main>
-      <aside className="right"><Inspector /></aside>
+      <aside className="right"><Inspector /><Proportions /></aside>
     </div>
   );
 }

@@ -1,0 +1,10 @@
+{
+  "name": "Proportions_Test",
+  "rigVersion": "2.0",
+  "options": { "exportViews": "all" },
+  "skeleton": {
+    "bones": { "upper_arm": 1.3, "forearm": 1.2, "thigh": 1.2, "shank": 1.1, "torso": 1.15, "neck": 1.25, "shoulders": 1.1 },
+    "joints": { "shoulder": 22, "elbow": 17, "wrist": 11, "hip": 24, "knee": 19, "ankle": 13, "waist": 38, "neck_base": 16, "neck_top": 18 }
+  },
+  "art": {}
+}

@@ -2,18 +2,27 @@
 import { MIRROR_VIEW, getPart, instanceName, mirrorOf, parseInstanceName } from '../../src/model/rig.js';
 import { reflectPath, transformPath } from '../../src/svg/path.js';
 
+/** Drawn art keeps its place on its joint: if the layout moved the slot since the art was drawn, the art moves with it. */
+export function anchorShift(a, slot) {
+  if (!a?.origin || !slot) return a;
+  const dx = slot.origin[0] - a.origin[0], dy = slot.origin[1] - a.origin[1];
+  if (Math.abs(dx) < 1e-6 && Math.abs(dy) < 1e-6) return a;
+  return { ...a, origin: [slot.origin[0], slot.origin[1]], paths: (a.paths ?? []).map(p => ({ ...p, d: transformPath(p.d, ([x, y]) => [x + dx, y + dy]) })) };
+}
+
 /** Resolved art for a slot: {paths, origin, derived, source} or null. */
 export function resolveSlot(art, tpl, key) {
   const a = art[key];
   if (!a) return null;
-  if (!a.mirrorOf) return { paths: a.paths ?? [], origin: a.origin, derived: false, source: null };
-  const src = art[a.mirrorOf];
-  const sv = parseInstanceName(a.mirrorOf)?.view;
+  if (!a.mirrorOf) { const an = anchorShift(a, tpl.slots[key]); return { paths: an.paths ?? [], origin: an.origin, derived: false, source: null }; }
+  const srcKey = a.mirrorOf, src = art[srcKey];
+  const sv = parseInstanceName(srcKey)?.view;
   const r = sv && tpl.reflections[`${sv}>${MIRROR_VIEW[sv]}`];
   if (!src || src.mirrorOf || !r) return null;
+  const an = anchorShift(src, tpl.slots[srcKey]);
   return {
-    paths: (src.paths ?? []).map(p => ({ ...p, d: reflectPath(p.d, r.K, r.dy) })),
-    origin: [r.K - src.origin[0], src.origin[1] + r.dy], derived: true, source: a.mirrorOf,
+    paths: (an.paths ?? []).map(p => ({ ...p, d: reflectPath(p.d, r.K, r.dy) })),
+    origin: [r.K - an.origin[0], an.origin[1] + r.dy], derived: true, source: srcKey,
   };
 }
 

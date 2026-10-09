@@ -28,6 +28,7 @@ export function createApp(rigOptions) {
   let rig = null, info = null;
   const load = () => { rig ??= loadRig(rigOptions); info ??= { ...describeTemplate(rig), rig: rig.name }; return { rig, info }; };
   app.get('/api/template', (req, res) => { try { res.json(load().info); } catch (e) { res.status(500).json({ error: e.message }); } });
+  app.get('/api/rig', (req, res) => { try { res.json(load().rig.data); } catch (e) { res.status(500).json({ error: e.message }); } });
   app.post('/api/export', (req, res) => {
     try {
       const { swf, report } = compileFromRig(req.body, load().rig);
