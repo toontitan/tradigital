@@ -19,6 +19,10 @@ export const STYLE = {
   translucent: { Upper_torso: '#d4d4d48c', Lower_torso: '#d4d4d48c' },
 };
 
+// joint names at each end of a limb segment (radius overrides live in rig.radii, keyed `elbow` or `Left_elbow`)
+const JOINT_OF = { arm: ['shoulder', 'elbow'], forearm: ['elbow', 'wrist'], thigh: ['hip', 'knee'], shank: ['knee', 'ankle'], foot: ['ankle', null] };
+const overrideR = (t, sideName, joint) => (joint ? (t.radii?.[`${sideName}${joint}`] ?? t.radii?.[joint]) : undefined);
+
 const JOINT_FILL = 0.9; // joint radius as a fraction of half the segment thickness
 
 function capsulePath([x0, y0], r0, [x1, y1], r1) {
@@ -87,6 +91,34 @@ function hairCapBounds(t, view, b) {
   return { xMin: b.xMin, xMax: b.xMax, yMin: Math.min(y0, y1), yMax: Math.max(y0, y1) };
 }
 
+const jointName = (side, name) => `${side}${name}`;
+/** Radius of a body joint: the override if set, else derived from the segments that meet there. */
+export function bodyJointRadius(t, name, side = '') {
+  const o = t.radii?.[`${side}${name}`] ?? t.radii?.[name];
+  if (o !== undefined) return o;
+  const th = (part, view) => thickness(t, instanceName(part, view));
+  switch (name) {
+    case 'shoulder': return limbGeometry(t, `${side}arm`, '0').r0;
+    case 'hip': return limbGeometry(t, `${side}thigh`, '0').r0;
+    case 'waist': return Math.min(th('Upper_torso', '0'), th('Lower_torso', '0')) * 0.35;
+    default: return th('Neck', '0') / 2 * JOINT_FILL; // neck_base, neck_top
+  }
+}
+
+/** Circles a torso/neck/face sprite shares with its neighbours, in the part's local space. */
+function bodyJoints(t, part, view) {
+  if (!t.pivotFor) return []; // layouts read straight from a SWF carry no pivot table
+  const key = instanceName(part, view), here = (stagePt) => stageToLocal(t, key, stagePt), out = [];
+  const at = (other) => t.has(instanceName(other, view)) ? t.position(instanceName(other, view)) : null;
+  const add = (stagePt, name, side = '') => { if (stagePt) out.push({ c: here(stagePt), r: bodyJointRadius(t, name, side), joint: jointName(side, name) }); };
+  const facePivot = t.pivotFor('Face', view);
+  if (part === 'Upper_torso') { add(at('Left_arm'), 'shoulder', 'Left_'); add(at('Right_arm'), 'shoulder', 'Right_'); add(t.position(key), 'waist'); add(at('Neck'), 'neck_base'); }
+  else if (part === 'Lower_torso') { add(at('Upper_torso'), 'waist'); add(at('Left_thigh'), 'hip', 'Left_'); add(at('Right_thigh'), 'hip', 'Right_'); }
+  else if (part === 'Neck') { add(t.position(key), 'neck_base'); add(facePivot, 'neck_top'); }
+  else if (part === 'Face') add(facePivot, 'neck_top');
+  return out;
+}
+
 /** Joint geometry of a limb segment in its local space: {c0, r0, c1, r1}; c1/r1 null for the last segment. */
 export function limbGeometry(t, part, view) {
   const s = side(part), b = base(part), key = instanceName(part, view);
@@ -96,9 +128,10 @@ export function limbGeometry(t, part, view) {
     return t.has(ok) && getPart(s + otherBase)?.kind !== 'expression' ? Math.min(own, thickness(t, ok) / 2 * JOINT_FILL) : own;
   };
   const parentBase = LIMB_PARENT[b], childBase = LIMB_CHILD[b];
-  const r0 = parentBase ? shared(parentBase) : own;
+  const [jProx, jDist] = JOINT_OF[b] ?? [];
+  const r0 = overrideR(t, s, jProx) ?? (parentBase ? shared(parentBase) : own);
   let c1 = null, r1 = null;
-  if (childBase && t.has(instanceName(s + childBase, view))) { c1 = toLocal(t, key, instanceName(s + childBase, view)); r1 = shared(childBase); }
+  if (childBase && t.has(instanceName(s + childBase, view))) { c1 = toLocal(t, key, instanceName(s + childBase, view)); r1 = overrideR(t, s, jDist) ?? shared(childBase); }
   return { c0: [0, 0], r0, c1, r1 };
 }
 
@@ -125,5 +158,10 @@ export function placeholderFor(t, part, view) {
   const style = { ...STYLE.body };
   if (STYLE.translucent[part]) style.fill = STYLE.translucent[part];
   if (part === 'Front_hair') return { paths: [{ d: roundedRectPath(hairCapBounds(t, view, b), 0, 0), ...style }], joints: [] };
-  return { paths: [{ d: roundedRectPath(b, 0, 0), ...style }], joints: [] };
+  const paths = [{ d: roundedRectPath(b, 0, 0), ...style }], joints = [];
+  for (const j of bodyJoints(t, part, view)) { // the same circle is drawn on the neighbouring sprite: one joint, one circle
+    joints.push(j);
+    paths.push({ d: circlePath(j.c, j.r), fill: style.fill === 'none' ? STYLE.limb.fill : style.fill });
+  }
+  return { paths, joints };
 }

@@ -10,7 +10,8 @@ export class Rig {
     this.name = data.name;
     this.slots = data.slots;      // key -> {origin:[x,y], matrix:[a,b,c,d], depth, local:{xMin,xMax,yMin,yMax}, pivot:[x,y]|null}
     this.pivots = data.pivots;    // name -> [x,y]  (<part>_<view>_pivot and *_nud_*_pivot)
-    this.absent = data.absent;    // view -> [part ids that the source layout leaves out (hidden in that view)]
+    this.absent = data.absent ?? {};
+    this.radii = data.radii ?? {};   // joint radius overrides in px (see rig/proportions.js JOINTS); empty = computed from part thickness    // view -> [part ids that the source layout leaves out (hidden in that view)]
   }
 
   has(key) { return key in this.slots || key in this.pivots; }

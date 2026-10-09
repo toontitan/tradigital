@@ -11,6 +11,8 @@ import { buildExpressionSet } from '../rig/expressions.js';
 import { SET_OF_PART } from '../rig/expression-sets.js';
 import { transformPath } from '../svg/path.js';
 import { isExpected } from '../rig/spec.js';
+import { Rig } from '../rig/rig.js';
+import { applyProportions } from '../rig/proportions.js';
 
 export const DOT = { diameter: 8, fill: '#888888', opacity: 0.02 }; // 5-10px, ~2% opaque: effectively invisible, deletable in CTA
 export const DRAWN_VIEWS = ['0', '315', '270', '225', '180', 'top', 'bottom']; // the views you draw; 45/90/135 mirror 315/270/225
@@ -45,7 +47,16 @@ export function resolveViews(ch, optsViews) {
  * @param {import('../rig/rig.js').Rig} rig
  * @param {{views?:string|string[], compress?:boolean, version?:number}} opts  views: overrides ch.options.exportViews
  */
-export function compileFromRig(ch, rig, opts = {}) {
+/** Drawn art keeps its place on its joint: if the layout moved the slot since the art was drawn, the art moves with it. */
+export function anchorArt(a, rig, key) {
+  if (!a.origin || !rig.has(key)) return a;
+  const [x, y] = rig.position(key), dx = x - a.origin[0], dy = y - a.origin[1];
+  if (Math.abs(dx) < 1e-6 && Math.abs(dy) < 1e-6) return a;
+  return { ...a, origin: [x, y], paths: a.paths.map(p => ({ ...p, d: transformPath(p.d, ([px, py]) => [px + dx, py + dy]) })) };
+}
+
+export function compileFromRig(ch, baseRig, opts = {}) {
+  const rig = ch.skeleton ? new Rig(applyProportions(baseRig.data, ch.skeleton)) : baseRig; // bone lengths / joint sizes
   const { errors, warnings } = validate(ch, rig);
   if (errors.length) throw new Error(`invalid character:\n  ${errors.join('\n  ')}`);
   const views = resolveViews(ch, opts.views);
@@ -79,7 +90,8 @@ export function compileFromRig(ch, rig, opts = {}) {
     if (a.mirrorOf) continue;
     const { view } = parseInstanceName(key);
     if (!views.includes(view)) continue;
-    sprites.set(key, { id: b.art(expandStrokes(a.paths, key, warnings), a.origin), origin: a.origin });
+    const anch = anchorArt(a, rig, key);
+    sprites.set(key, { id: b.art(expandStrokes(anch.paths, key, warnings), anch.origin), origin: anch.origin });
   }
 
   for (const view of views) {
