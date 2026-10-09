@@ -6,6 +6,10 @@ import { Rig } from '../../src/rig/rig.js';
 import { applyProportions } from '../../src/rig/proportions.js';
 import { describeTemplate } from '../../src/model/templateInfo.js';
 import { anchorShift } from './scene.js';
+import { DEFAULT_SHADER } from './toonTitan.js';
+
+const jget = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); if (v != null) return v; } catch { /* none */ } return d; };
+const jset = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage unavailable */ } };
 
 /** Editor geometry for a rig with the character's proportions applied. */
 export const computeTemplate = (rigData, skeleton) => describeTemplate(new Rig(skeleton ? applyProportions(rigData, skeleton) : rigData));
@@ -18,6 +22,7 @@ export const useStore = create((set, get) => ({
   template: null, rigData: null, error: null, character: load(),
   view: '0', part: 'Right_arm', tool: 'pen', selIdx: null,
   style: { fill: '#e03030', stroke: '#000000', strokeWidth: 4, filled: true, stroked: true },
+  shader: { ...DEFAULT_SHADER, ...jget('tradigital.shader', {}) }, palette: jget('tradigital.palette', Array(12).fill(null)), colorTarget: 'fill',
   undo: [], redo: [],
 
   async loadTemplate() {
@@ -47,6 +52,14 @@ export const useStore = create((set, get) => ({
   setPart: (part) => set({ part, selIdx: null }),
   setTool: (tool) => set({ tool }),
   setStyle: (patch) => set(s => ({ style: { ...s.style, ...patch } })),
+  setShader: (patch) => set(s => { const shader = { ...s.shader, ...patch }; jset('tradigital.shader', shader); return { shader }; }),
+  setPalette: (i, v) => set(s => { const palette = s.palette.map((x, j) => (j === i ? v : x)); jset('tradigital.palette', palette); return { palette }; }),
+  setColorTarget: (colorTarget) => set({ colorTarget }),
+  /** Make a color the active drawing color (fill or stroke; `swap` uses the other one). */
+  useColor(hex, swap = false) {
+    const target = (get().colorTarget === 'fill') !== swap ? 'fill' : 'stroke';
+    set(s => ({ style: { ...s.style, ...(target === 'fill' ? { fill: hex, filled: true } : { stroke: hex, stroked: true }) } }));
+  },
   setSel: (selIdx) => set({ selIdx }),
   key: () => instanceName(get().part, get().view),
 

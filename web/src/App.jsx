@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Stage from './Stage.jsx';
+import ColorPanel from './ColorPanel.jsx';
 import { useStore, PART_GROUPS } from './store.js';
 import { VIEWS, instanceName, getPart } from '../../src/model/rig.js';
 import { viewScene, viewBounds, slotStatus, partnerKey, screenSide } from './scene.js';
@@ -202,7 +203,7 @@ export default function App() {
         <Parts />
       </aside>
       <main><Stage /><div className="hint">wheel = zoom · space/middle-drag = pan · Enter finishes a pen path · Del removes · Ctrl+Z undo</div></main>
-      <aside className="right"><Inspector /><Proportions /></aside>
+      <aside className="right"><Inspector /><ColorPanel /><Proportions /></aside>
     </div>
   );
 }
