@@ -25,13 +25,19 @@ export function loadRig({ templatePath = process.env.TEMPLATE_SWF, rigName = pro
 export function createApp(rigOptions) {
   const app = express();
   app.use(express.json({ limit: '50mb' }));
-  let rig = null, info = null;
-  const load = () => { rig ??= loadRig(rigOptions); info ??= { ...describeTemplate(rig), rig: rig.name }; return { rig, info }; };
-  app.get('/api/template', (req, res) => { try { res.json(load().info); } catch (e) { res.status(500).json({ error: e.message }); } });
-  app.get('/api/rig', (req, res) => { try { res.json(load().rig.data); } catch (e) { res.status(500).json({ error: e.message }); } });
+  const rigs = new Map();
+  const nameOf = (n) => (typeof n === 'string' && /^[a-z0-9_-]{1,40}$/i.test(n) ? n : undefined);
+  const load = (name) => {
+    const key = name ?? '';
+    if (!rigs.has(key)) { const rig = loadRig({ ...rigOptions, ...(name ? { rigName: name, templatePath: undefined } : {}) }); rigs.set(key, { rig, info: { ...describeTemplate(rig), rig: rig.name } }); }
+    return rigs.get(key);
+  };
+  app.get('/api/rigs', (req, res) => res.json(fs.readdirSync(path.join(root, 'src/rig/rigs')).filter(f => f.endsWith('.json')).map(f => f.slice(0, -5)).sort()));
+  app.get('/api/template', (req, res) => { try { res.json(load(nameOf(req.query.rig)).info); } catch (e) { res.status(500).json({ error: e.message }); } });
+  app.get('/api/rig', (req, res) => { try { res.json(load(nameOf(req.query.rig)).rig.data); } catch (e) { res.status(500).json({ error: e.message }); } });
   app.post('/api/export', (req, res) => {
     try {
-      const { swf, report } = compileFromRig(req.body, load().rig);
+      const { swf, report } = compileFromRig(req.body, load(nameOf(req.body?.rig)).rig);
       res.set({
         'Content-Type': 'application/x-shockwave-flash',
         'X-Report': encodeURIComponent(JSON.stringify({ views: report.views, drawn: report.drawn.length, mirrored: report.mirrored.length, sets: report.expression.length, placeholders: report.placeholders.length, dots: report.dots.length, warnings: report.warnings })),

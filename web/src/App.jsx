@@ -164,7 +164,8 @@ export default function App() {
   const s = useStore();
   const file = useRef(null);
   const [msg, setMsg] = useState(null);
-  useEffect(() => { s.loadTemplate(); }, []);
+  const [rigs, setRigs] = useState(['mojo']);
+  useEffect(() => { s.loadTemplate(); fetch('/api/rigs').then(r => r.json()).then(setRigs).catch(() => {}); }, []);
 
   const exportSwf = async () => {
     const { errors } = validate(s.character, null);
@@ -188,6 +189,7 @@ export default function App() {
       <header>
         <b>Tradigital G2</b>
         <input className="name" value={s.character.name} onChange={e => s.setName(e.target.value.replace(/[^\w-]/g, '_'))} />
+        <label className="views" title="Base skeleton layout">Rig <select value={s.character.rig ?? 'mojo'} data-act="rig" onChange={e => { if (!drawnCount || confirm('Switch skeleton? Your drawings keep their stage position but may need re-aligning.')) s.setRig(e.target.value); }}>{rigs.map(r => <option key={r}>{r}</option>)}</select></label>
         <button onClick={s.undoStep} disabled={!s.undo.length}>Undo</button>
         <button onClick={s.redoStep} disabled={!s.redo.length}>Redo</button>
         <span className="sp" />

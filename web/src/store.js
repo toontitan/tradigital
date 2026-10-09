@@ -27,7 +27,7 @@ export const useStore = create((set, get) => ({
 
   async loadTemplate() {
     try {
-      const r = await fetch('/api/rig');
+      const r = await fetch(`/api/rig?rig=${encodeURIComponent(get().character.rig ?? 'mojo')}`);
       const j = await r.json();
       if (!r.ok) throw new Error(j.error);
       set({ rigData: j, template: computeTemplate(j, get().character.skeleton), error: null });
@@ -124,8 +124,10 @@ export const useStore = create((set, get) => ({
     get().commit(art);
   },
 
-  newCharacter() { const ch = createCharacter(); save(ch); set({ character: ch, undo: [], redo: [], selIdx: null }); },
-  importCharacter(ch) { if (!ch?.art) throw new Error('not a character file'); save(ch); set({ character: ch, undo: [], redo: [], selIdx: null }); },
+  newCharacter() { const ch = { ...createCharacter(), rig: get().character.rig }; save(ch); set({ character: ch, undo: [], redo: [], selIdx: null }); },
+  /** Switch the base skeleton layout (built-in rig name). Drawn art keeps its stage position. */
+  async setRig(rig) { const ch = { ...get().character, rig }; save(ch); set({ character: ch }); await get().loadTemplate(); },
+  async importCharacter(ch) { if (!ch?.art) throw new Error('not a character file'); const was = get().character.rig; save(ch); set({ character: ch, undo: [], redo: [], selIdx: null }); if (ch.rig !== was) await get().loadTemplate(); },
   setExportViews(exportViews) { const ch = { ...get().character, options: { ...get().character.options, exportViews } }; save(ch); set({ character: ch }); },
   setName(name) { const ch = { ...get().character, name }; save(ch); set({ character: ch }); },
 }));
