@@ -28,9 +28,9 @@ test('built-in rig: reflections exist for every view pair and agree within a few
   assert.ok(r.n >= 20 && r.spread < 10 && Math.abs(r.dy) > 900, JSON.stringify(r));
 });
 
-test('built-in rig: describeTemplate gives the editor every present slot with placeholders', () => {
+test('built-in rig: describeTemplate gives the editor every expected slot with placeholders', () => {
   const info = describeTemplate(rig);
-  assert.equal(Object.keys(info.slots).length, 248);
+  assert.equal(Object.keys(info.slots).length, 209); // only the parts Cartoon Animator expects per view
   for (const s of Object.values(info.slots)) assert.ok(s.placeholder.paths.length >= 1, `${s.part}@${s.view}`);
   assert.equal(info.stage.width, 2500);
 });

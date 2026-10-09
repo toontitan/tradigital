@@ -6,6 +6,7 @@ import { compileFromRig, DRAWN_VIEWS } from '../src/model/compile-rig.js';
 import { createCharacter, setArt } from '../src/model/character.js';
 import { PARTS, VIEWS, instanceName, pivotName } from '../src/model/rig.js';
 import { EYE_FRAMES, MOUTH_FRAMES, NOSE_FRAMES } from '../src/rig/expression-sets.js';
+import { EXPECTED_PARTS } from '../src/rig/spec.js';
 import { readSwf, TAG, parsePlaceObject2, parseDefineSprite } from '../src/swf/reader.js';
 import { decodeShape } from '../src/swf/shapeDecode.js';
 import { TemplateSwf } from '../src/swf/template.js';
@@ -19,15 +20,19 @@ const placed = parsed.tags.filter(t => t.code === TAG.PlaceObject2).map(t => par
 const byName = Object.fromEntries(placed.map(p => [p.name, p]));
 const spriteFrames = (id) => { const s = parseDefineSprite(defs.get(id).body); const frames = [[]]; for (const k of s.tags) { if (k.code === 1) frames.push([]); else if (k.code === 26) frames.at(-1).push(parsePlaceObject2(k.body)); } frames.pop(); return frames; };
 
-test('default character: every part slot, pivot and nudge marker exists, with unique depths', () => {
-  const partKeys = VIEWS.flatMap(v => PARTS.map(p => instanceName(p.id, v)));
-  for (const k of partKeys) assert.ok(byName[k], k);
-  for (const v of VIEWS) for (const p of PARTS) assert.ok(byName[pivotName(p.id, v)], pivotName(p.id, v));
-  assert.equal(placed.length, 260 + 260 + 50);
+test('default character: exactly the parts Cartoon Animator expects per view, each with a pivot, unique depths', () => {
+  let parts = 0;
+  for (const v of VIEWS) for (const p of PARTS) {
+    const exp = EXPECTED_PARTS[v].includes(p.id);
+    assert.equal(!!byName[instanceName(p.id, v)], exp, instanceName(p.id, v));
+    assert.equal(!!byName[pivotName(p.id, v)], exp, pivotName(p.id, v));
+    if (exp) parts++;
+  }
+  assert.equal(parts, 26 * 3 + 23 * 2 + 17 * 5); // 0/45/315, 90/270, 135/225/180/top/bottom
+  assert.equal(placed.length, parts * 2 + 50);
   assert.equal(new Set(placed.map(p => p.depth)).size, placed.length);
   assert.equal(parsed.version, 20);
-  assert.deepEqual(report.dots.length, 12);
-  assert.equal(report.expression.length, 68);
+  assert.deepEqual(report.dots, []);
 });
 
 test('every generated shape decodes cleanly (no malformed records)', () => {
@@ -57,13 +62,20 @@ test('an open eye frame is a named wrapper with Image, a clip Mask and Pupil', (
   assert.equal(spriteFrames(pupil.characterId)[0].length, 1); // pupil sprite wraps one shape
 });
 
-test('hidden slots get a ~2% opaque 8px dot (never an empty slot)', () => {
-  assert.ok(report.dots.includes('Left_eye_top') && report.dots.includes('Mouth_bottom'));
-  const kid = spriteFrames(byName.Left_eye_top.characterId)[0][0];
-  const sh = decodeShape(83, defs.get(kid.characterId).body);
+test('an expected part the layout has no position for gets a ~2% opaque 8px dot (never an empty slot)', () => {
+  const data = JSON.parse(JSON.stringify(rig.data));
+  delete data.slots.Left_ear_315; delete data.pivots.left_ear_315_pivot;
+  const out = compileFromRig(createCharacter(), new Rig(data), { views: ['315'] });
+  assert.deepEqual(out.report.dots, ['Left_ear_315']);
+  const sw = readSwf(out.swf), defs2 = new Map();
+  for (const t of sw.tags) if ([83, 39].includes(t.code)) defs2.set(t.body.readUInt16LE(0), t);
+  const pl = sw.tags.filter(t => t.code === TAG.PlaceObject2).map(t => parsePlaceObject2(t.body)).find(p => p.name === 'Left_ear_315');
+  const kid = parsePlaceObject2(parseDefineSprite(defs2.get(pl.characterId).body).tags.find(t => t.code === 26).body);
+  const sh = decodeShape(83, defs2.get(kid.characterId).body);
   assert.equal(sh.fills[0].color[3], 5); // 0.02 * 255
   const w = (sh.bounds.xMax - sh.bounds.xMin) / 20;
   assert.ok(w >= 5 && w <= 10, `dot width ${w}`);
+  assert.ok(sw.tags.some(t => t.code === TAG.PlaceObject2 && parsePlaceObject2(t.body).name === 'left_ear_315_pivot'), 'dot slot still has its pivot');
 });
 
 test('placeholders and pivots sit exactly where the rig says; the output re-reads as a template', () => {
@@ -95,8 +107,8 @@ test('drawing 315/270/225 automatically mirrors into 45/90/135 (flipped, at the 
 test('seven-view export omits 45/90/135', () => {
   const out = compileFromRig(createCharacter(), rig, { views: DRAWN_VIEWS });
   const names = readSwf(out.swf).tags.filter(t => t.code === TAG.PlaceObject2).map(t => parsePlaceObject2(t.body).name);
-  assert.ok(!names.some(n => /_(45|90|135)(_pivot)?$/.test(n) && !/nud/.test(n) || /_(45|90|135)_pivot$/.test(n)));
-  assert.equal(names.filter(n => /^[A-Z]/.test(n)).length, 26 * 7);
+  assert.ok(!names.some(n => /_(45|90|135)(_pivot)?$/.test(n)));
+  assert.equal(names.filter(n => /^[A-Z]/.test(n)).length, 26 + 26 + 23 + 17 + 17 + 17 + 17); // 0, 315, 270, 225, 180, top, bottom
 });
 
 import { resolveViews } from '../src/model/compile-rig.js';
@@ -112,7 +124,7 @@ test('default export covers only the views you drew (front always included); CTA
   assert.deepEqual(out.report.views, ['0', '270']);
   const names = readSwf(out.swf).tags.filter(t => t.code === TAG.PlaceObject2).map(t => parsePlaceObject2(t.body).name);
   assert.ok(names.every(n => /_(0|270)(_pivot)?$/.test(n)), 'nothing exported for undrawn views');
-  assert.equal(names.filter(n => /^[A-Z]/.test(n)).length, 26 * 2);
+  assert.equal(names.filter(n => /^[A-Z]/.test(n)).length, 26 + 17 + 6 * 0 + 6); // front 26; 270 expects 23
   assert.deepEqual(resolveViews({ ...ch, options: { exportViews: 'all' } }), VIEWS);
   assert.deepEqual(resolveViews({ ...ch, options: { exportViews: ['180', '0'] } }), ['0', '180']);
   assert.deepEqual(resolveViews(ch, 'seven'), DRAWN_VIEWS);

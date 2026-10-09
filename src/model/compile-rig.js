@@ -10,6 +10,7 @@ import { expandStrokes } from './strokes.js';
 import { buildExpressionSet } from '../rig/expressions.js';
 import { SET_OF_PART } from '../rig/expression-sets.js';
 import { transformPath } from '../svg/path.js';
+import { isExpected } from '../rig/spec.js';
 
 export const DOT = { diameter: 8, fill: '#888888', opacity: 0.02 }; // 5-10px, ~2% opaque: effectively invisible, deletable in CTA
 export const DRAWN_VIEWS = ['0', '315', '270', '225', '180', 'top', 'bottom']; // the views you draw; 45/90/135 mirror 315/270/225
@@ -84,6 +85,7 @@ export function compileFromRig(ch, rig, opts = {}) {
   for (const view of views) {
     for (const part of PARTS) {
       const key = instanceName(part.id, view), a = art[key], present = rig.has(key);
+      if (!isExpected(part.id, view) && !a) continue; // Cartoon Animator does not look for this part in this view
       let rec;
       if (a && !a.mirrorOf) { // drawn
         const s = sprites.get(key);
@@ -105,7 +107,7 @@ export function compileFromRig(ch, rig, opts = {}) {
           rec = { key, view, id: b.art(ph.paths.map(p => ({ ...p, d: transformPath(p.d, ([x, y]) => [x + ox, y + oy]) })), [ox, oy]), origin: [ox, oy], matrix: rig.matrix(key), kind: 'placeholder' };
           report.placeholders.push(key);
         }
-      } else { // hidden in this view: a near-invisible dot so the slot still exists
+      } else { // expected by Cartoon Animator but the layout has no position for it: a near-invisible dot so the slot still exists
         rec = { key, view, id: dotId, origin: rig.dotOrigin(view), matrix: IDENTITY, kind: 'dot' };
         report.dots.push(key);
       }
@@ -126,6 +128,7 @@ export function compileFromRig(ch, rig, opts = {}) {
   for (const view of views) {
     for (const part of PARTS) {
       const key = instanceName(part.id, view), pn = pivotName(part.id, view), rec = records.find(r => r.key === key);
+      if (!rec) continue;
       const base = rig.pivotFor(part.id, view);
       const d = shift[key] ?? [0, 0];
       putPivot(pn, pivotId, base ? [base[0] + d[0], base[1] + d[1]] : rec.origin);

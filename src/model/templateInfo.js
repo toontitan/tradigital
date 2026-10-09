@@ -2,12 +2,13 @@
 import { PARTS, VIEWS, instanceName, pivotName } from './rig.js';
 import { deriveReflections } from './reflect.js';
 import { placeholderFor } from './placeholders.js';
+import { isExpected } from '../rig/spec.js';
 
 export function describeTemplate(t) {
   const slots = {};
   for (const part of PARTS) for (const view of VIEWS) {
     const key = instanceName(part.id, view);
-    if (!t.has(key)) continue;
+    if (!t.has(key) || !isExpected(part.id, view)) continue;
     const m = t.matrix(key), bounds = t.instanceBounds(key), local = t.localBounds(key);
     if (!bounds || !local) continue;
     const pv = t.has(pivotName(part.id, view)) ? t.position(pivotName(part.id, view)) : null;

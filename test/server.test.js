@@ -9,7 +9,7 @@ test('server: rig info and export work with no template file', async () => {
   try {
     const info = await (await fetch(`${base}/api/template`)).json();
     assert.equal(info.rig, 'mojo');
-    assert.equal(Object.keys(info.slots).length, 248);
+    assert.equal(Object.keys(info.slots).length, 209); // only the parts Cartoon Animator expects per view
     assert.ok(info.reflections['45>315'].K > 1000);
     const ch = { name: 't', art: { Right_arm_0: { origin: info.slots.Right_arm_0.origin, paths: [{ d: 'M0,0L10,0L10,10Z', fill: '#f00', stroke: '#000', strokeWidth: 3 }] }, Left_arm_0: { mirrorOf: 'Right_arm_0' } } };
     const r = await fetch(`${base}/api/export`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(ch) });
