@@ -91,6 +91,7 @@ export const useStore = create((set, get) => ({
 
   newCharacter() { const ch = createCharacter(); save(ch); set({ character: ch, undo: [], redo: [], selIdx: null }); },
   importCharacter(ch) { if (!ch?.art) throw new Error('not a character file'); save(ch); set({ character: ch, undo: [], redo: [], selIdx: null }); },
+  setExportViews(exportViews) { const ch = { ...get().character, options: { ...get().character.options, exportViews } }; save(ch); set({ character: ch }); },
   setName(name) { const ch = { ...get().character, name }; save(ch); set({ character: ch }); },
 }));
 

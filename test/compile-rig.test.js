@@ -11,7 +11,7 @@ import { decodeShape } from '../src/swf/shapeDecode.js';
 import { TemplateSwf } from '../src/swf/template.js';
 
 const rig = new Rig(JSON.parse(fs.readFileSync(new URL('../src/rig/rigs/mojo.json', import.meta.url))));
-const { swf, report } = compileFromRig(createCharacter(), rig);
+const { swf, report } = compileFromRig(createCharacter(), rig, { views: 'all' });
 const parsed = readSwf(swf);
 const defs = new Map();
 for (const t of parsed.tags) if ([2, 22, 32, 83, 39].includes(t.code)) defs.set(t.body.readUInt16LE(0), t);
@@ -80,7 +80,7 @@ test('drawing 315/270/225 automatically mirrors into 45/90/135 (flipped, at the 
   let ch = createCharacter();
   const path = { d: 'M1000,500L1040,500L1040,560L1000,560Z', fill: '#cc2222' };
   ch = setArt(ch, 'Right_arm', '315', { origin: rig.position('Right_arm_315'), paths: [path] });
-  const out = compileFromRig(ch, rig);
+  const out = compileFromRig(ch, rig, { views: 'all' });
   assert.deepEqual(out.report.drawn, ['Right_arm_315']);
   assert.deepEqual(out.report.mirrored, ['Left_arm_45']);
   const pl = Object.fromEntries(readSwf(out.swf).tags.filter(t => t.code === TAG.PlaceObject2).map(t => parsePlaceObject2(t.body)).map(p => [p.name, p]));
@@ -97,4 +97,32 @@ test('seven-view export omits 45/90/135', () => {
   const names = readSwf(out.swf).tags.filter(t => t.code === TAG.PlaceObject2).map(t => parsePlaceObject2(t.body).name);
   assert.ok(!names.some(n => /_(45|90|135)(_pivot)?$/.test(n) && !/nud/.test(n) || /_(45|90|135)_pivot$/.test(n)));
   assert.equal(names.filter(n => /^[A-Z]/.test(n)).length, 26 * 7);
+});
+
+import { resolveViews } from '../src/model/compile-rig.js';
+
+test('default export covers only the views you drew (front always included); CTA replicates the rest', () => {
+  assert.deepEqual(resolveViews(createCharacter()), ['0']);
+  let ch = createCharacter();
+  const art = { origin: rig.position('Right_arm_0'), paths: [{ d: 'M0,0L5,0L5,5Z', fill: '#f00' }] };
+  ch = setArt(ch, 'Right_arm', '0', art);
+  ch = setArt(ch, 'Right_foot', '270', { origin: rig.position('Right_foot_270'), paths: art.paths });
+  assert.deepEqual(resolveViews(ch), ['0', '270']);
+  const out = compileFromRig(ch, rig);
+  assert.deepEqual(out.report.views, ['0', '270']);
+  const names = readSwf(out.swf).tags.filter(t => t.code === TAG.PlaceObject2).map(t => parsePlaceObject2(t.body).name);
+  assert.ok(names.every(n => /_(0|270)(_pivot)?$/.test(n)), 'nothing exported for undrawn views');
+  assert.equal(names.filter(n => /^[A-Z]/.test(n)).length, 26 * 2);
+  assert.deepEqual(resolveViews({ ...ch, options: { exportViews: 'all' } }), VIEWS);
+  assert.deepEqual(resolveViews({ ...ch, options: { exportViews: ['180', '0'] } }), ['0', '180']);
+  assert.deepEqual(resolveViews(ch, 'seven'), DRAWN_VIEWS);
+});
+
+test('an explicit cross-view mirror pulls both views into the export', () => {
+  let ch = createCharacter();
+  ch = setArt(ch, 'Right_arm', '315', { origin: rig.position('Right_arm_315'), paths: [{ d: 'M0,0L5,0L5,5Z', fill: '#f00' }] });
+  ch = setArt(ch, 'Left_arm', '45', { mirrorOf: 'Right_arm_315' });
+  assert.deepEqual(resolveViews(ch), ['0', '45', '315']);
+  const out = compileFromRig(ch, rig);
+  assert.deepEqual(out.report.mirrored, ['Left_arm_45']);
 });

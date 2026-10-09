@@ -1,0 +1,11 @@
+{
+  "name": "Front_Only_Arm",
+  "rigVersion": "2.0",
+  "art": {
+    "Right_arm_0": {
+      "origin": [238.1, 428.25],
+      "paths": [{ "d": "M221,426L255,426L252,578L224,578Z", "fill": "#e03030", "stroke": "#000000", "strokeWidth": 4 }]
+    },
+    "Left_arm_0": { "mirrorOf": "Right_arm_0" }
+  }
+}

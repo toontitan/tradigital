@@ -108,12 +108,12 @@ export default function App() {
     const rep = JSON.parse(decodeURIComponent(r.headers.get('X-Report') ?? '{}'));
     const url = URL.createObjectURL(await r.blob());
     Object.assign(document.createElement('a'), { href: url, download: `${s.character.name}.swf` }).click();
-    setMsg({ text: `Exported ${s.character.name}.swf — ${rep.drawn} drawn, ${rep.mirrored} mirrored, ${rep.fallback} grey fallback` });
+    setMsg({ text: `Exported ${s.character.name}.swf — views ${rep.views.join(', ')} · ${rep.drawn} drawn, ${rep.mirrored} mirrored, ${rep.sets} face/hand sets, ${rep.placeholders} placeholders, ${rep.dots} dots` });
   };
   const saveJson = () => Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([JSON.stringify(s.character, null, 1)], { type: 'application/json' })), download: `${s.character.name}.json` }).click();
   const loadJson = async (e) => { try { s.importCharacter(JSON.parse(await e.target.files[0].text())); setMsg({ text: 'Loaded' }); } catch (x) { setMsg({ bad: true, text: x.message }); } e.target.value = ''; };
 
-  if (s.error) return <div className="fatal"><h2>Can't load the template</h2><p>{s.error}</p><p>Put your template SWF at <code>examples/template.swf</code> or set <code>TEMPLATE_SWF</code>, then restart the server.</p></div>;
+  if (s.error) return <div className="fatal"><h2>Can't load the template</h2><p>{s.error}</p><p>The built-in rig could not be loaded; check the server log.</p></div>;
   if (!s.template) return <div className="fatal">Loading template…</div>;
   const drawnCount = Object.keys(s.character.art).length;
   return (
@@ -130,6 +130,14 @@ export default function App() {
         <button onClick={saveJson}>Save</button>
         <button onClick={() => file.current.click()}>Open</button>
         <input ref={file} type="file" accept=".json" hidden onChange={loadJson} />
+        <label className="views" title="Cartoon Animator copies the sprites you give it onto the angles that are missing, so only drawn views are exported by default">
+          Export views
+          <select value={s.character.options?.exportViews ?? 'drawn'} onChange={e => s.setExportViews(e.target.value)} data-act="views">
+            <option value="drawn">Drawn views only (recommended)</option>
+            <option value="seven">Seven views (0, 315, 270, 225, 180, top, bottom)</option>
+            <option value="all">All ten views</option>
+          </select>
+        </label>
         <button className="primary" onClick={exportSwf} data-act="export">Export SWF</button>
       </header>
       <aside className="left">

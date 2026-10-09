@@ -37,3 +37,5 @@ kbd { font: 10px ui-monospace, monospace; opacity: .7; }
 .fatal { max-width: 520px; margin: 14vh auto; padding: 0 20px; }
 
 .side { margin: -4px 0 10px; color: var(--mute); font-size: 12px; }
+
+.views { display: flex; align-items: center; gap: 6px; color: var(--mute); } .views select { font: inherit; color: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }

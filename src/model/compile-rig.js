@@ -20,18 +20,38 @@ const circle = (r) => `M${-r},0A${r},${r} 0 1 1 ${r},0A${r},${r} 0 1 1 ${-r},0Z`
 const IDENTITY = { scaleX: 1, scaleY: 1, skew0: 0, skew1: 0 };
 
 /**
+ * Which views to write. Cartoon Animator copies the sprites it is given onto the angles that are missing,
+ * so by default only views you actually drew are exported (the front view always is).
+ * ch.options.exportViews: 'drawn' (default) | 'seven' | 'all' | an explicit list of views.
+ */
+export function resolveViews(ch, optsViews) {
+  const mode = optsViews ?? ch.options?.exportViews ?? 'drawn';
+  if (Array.isArray(mode)) return VIEWS.filter(v => mode.includes(v));
+  if (mode === 'all') return VIEWS;
+  if (mode === 'seven') return DRAWN_VIEWS;
+  const used = new Set(['0']);
+  for (const [key, a] of Object.entries(ch.art ?? {})) {
+    const slot = parseInstanceName(key);
+    if (!slot) continue;
+    if (a.mirrorOf) used.add(parseInstanceName(a.mirrorOf).view);
+    used.add(slot.view);
+  }
+  return VIEWS.filter(v => used.has(v));
+}
+
+/**
  * @param {object} ch   character document (model/character.js)
  * @param {import('../rig/rig.js').Rig} rig
- * @param {{views?:string[], compress?:boolean, version?:number}} opts  views: which views to export (default: all ten)
+ * @param {{views?:string|string[], compress?:boolean, version?:number}} opts  views: overrides ch.options.exportViews
  */
 export function compileFromRig(ch, rig, opts = {}) {
   const { errors, warnings } = validate(ch, rig);
   if (errors.length) throw new Error(`invalid character:\n  ${errors.join('\n  ')}`);
-  const views = opts.views ?? VIEWS;
+  const views = resolveViews(ch, opts.views);
   const stage = rig.stageSize();
   const b = new SwfBuilder({ width: stage.width, height: stage.height, version: opts.version ?? 20 });
   const refl = deriveReflections(rig);
-  const report = { drawn: [], mirrored: [], expression: [], placeholders: [], dots: [], warnings };
+  const report = { views, drawn: [], mirrored: [], expression: [], placeholders: [], dots: [], warnings };
 
   // ---- resolve art: explicit entries, plus automatic mirrors of the drawn half (315/270/225 -> 45/90/135) ----
   const art = { ...ch.art };
