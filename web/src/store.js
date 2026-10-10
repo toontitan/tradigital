@@ -7,6 +7,7 @@ import { applyProportions } from '../../src/rig/proportions.js';
 import { describeTemplate } from '../../src/model/templateInfo.js';
 import { anchorShift } from './scene.js';
 import { DEFAULT_SHADER } from './toonTitan.js';
+import { BRUSH_DEFAULTS } from './brush.js';
 
 const jget = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); if (v != null) return v; } catch { /* none */ } return d; };
 const jset = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage unavailable */ } };
@@ -23,6 +24,7 @@ export const useStore = create((set, get) => ({
   view: '0', part: 'Right_arm', tool: 'pen', selIdx: null,
   style: { fill: '#a6a6a6', stroke: '#4d4d4d', strokeWidth: 4, filled: true, stroked: true },
   shader: { ...DEFAULT_SHADER, ...jget('tradigital.shader', {}) }, palette: jget('tradigital.palette', Array(12).fill(null)), colorTarget: 'fill',
+  brush: { ...BRUSH_DEFAULTS, ...jget('tradigital.brush', {}) },
   undo: [], redo: [],
 
   async loadTemplate() {
@@ -54,6 +56,7 @@ export const useStore = create((set, get) => ({
   setStyle: (patch) => set(s => ({ style: { ...s.style, ...patch } })),
   setShader: (patch) => set(s => { const shader = { ...s.shader, ...patch }; jset('tradigital.shader', shader); return { shader }; }),
   setPalette: (i, v) => set(s => { const palette = s.palette.map((x, j) => (j === i ? v : x)); jset('tradigital.palette', palette); return { palette }; }),
+  setBrush: (patch) => set(s => { const brush = { ...s.brush, ...patch }; jset('tradigital.brush', brush); return { brush }; }),
   setColorTarget: (colorTarget) => set({ colorTarget }),
   /** Make a color the active drawing color (fill or stroke; `swap` uses the other one). */
   useColor(hex, swap = false) {

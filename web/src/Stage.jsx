@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import paper from 'paper';
 import { useStore } from './store.js';
+import { brushOutline, makePressure } from './brush.js';
 import { resolveSlot, viewBounds, viewScene, placeholderItems, jointCircles } from './scene.js';
 
 const DIM = 0.28;
@@ -44,6 +45,16 @@ export default function Stage() {
     const tol = () => 7 / paper.view.zoom;
     const t = new paper.Tool();
     let drag = null, panning = null, space = false, brush = null;
+    let ptr = { pressure: 0.5, pointerType: 'mouse' };
+    const onPtr = (ev) => { ptr = { pressure: ev.pressure, pointerType: ev.pointerType }; };
+    cv.addEventListener('pointerdown', onPtr); cv.addEventListener('pointermove', onPtr);
+    const brushSample = (e) => ({ x: e.point.x, y: e.point.y, t: e.event.timeStamp, zoom: paper.view.zoom, ...ptr });
+    const brushPreview = () => {
+      const { brush: bo, style } = S(), pts = brushOutline(brush.samples, bo);
+      brush.path.removeSegments();
+      if (pts.length) { brush.path.addSegments(pts.map(p => new paper.Point(p.x, p.y))); brush.path.closed = true; }
+      brush.path.fillColor = style.fill;
+    };
     const blocked = () => S().isMirroredSlot();
 
     const draftStyle = () => { const { style } = S(); return { stroke: style.stroked || !style.filled ? style.stroke : '#3b82f6', strokeWidth: style.strokeWidth }; };
@@ -69,8 +80,8 @@ export default function Stage() {
         if (pen.segments.length > 2 && pen.firstSegment.point.getDistance(e.point) < tol() * 1.5) { finishPen(true); return; }
         drag = { seg: pen.add(e.point) };
       } else if (tl === 'brush') {
-        brush = new paper.Path({ ...draftStyle(), strokeCap: 'round', strokeJoin: 'round', parent: L.ui });
-        brush.add(e.point);
+        brush = { path: new paper.Path({ parent: L.ui, closed: true, strokeColor: null }), pressure: makePressure(S().brush.mode), samples: [] };
+        brush.samples.push({ x: e.point.x, y: e.point.y, p: brush.pressure(brushSample(e)) }); brushPreview();
       } else if (tl === 'eraser') {
         drag = { erase: true }; eraseAt(e.point);
       } else if (tl === 'fill') {
@@ -102,7 +113,7 @@ export default function Stage() {
       if (blocked()) return;
       const { tool: tl } = S();
       if (tl === 'pen' && drag?.seg) { const out = e.point.subtract(drag.seg.point); drag.seg.handleOut = out; drag.seg.handleIn = out.multiply(-1); }
-      else if (tl === 'brush' && brush) brush.add(e.point);
+      else if (tl === 'brush' && brush) { brush.samples.push({ x: e.point.x, y: e.point.y, p: brush.pressure(brushSample(e)) }); brushPreview(); }
       else if (tl === 'eraser' && drag?.erase) eraseAt(e.point);
       else if (tl === 'select' && drag?.item) {
         if (drag.kind === 'segment') drag.seg.point = drag.seg.point.add(e.delta);
@@ -115,9 +126,13 @@ export default function Stage() {
       if (panning) { panning = null; return; }
       if (brush) {
         const b = brush; brush = null;
-        b.simplify(2);
-        if (b.length > 2) { const { style } = S(); S().addPath({ d: b.pathData, fill: 'none', stroke: style.stroke, strokeWidth: style.strokeWidth }); }
-        b.remove();
+        const { style, brush: bo } = S(), p = b.path;
+        if (p.segments.length > 2) {
+          p.simplify(Math.max(0.15, bo.size * 0.02));
+          if (p.getCrossings().length) { const r = p.resolveCrossings(); if (r !== p) { p.remove(); b.path = r; } }
+          S().addPath({ d: b.path.pathData, fill: style.fill, stroke: 'none', strokeWidth: 0 });
+        }
+        b.path.remove();
       } else if (drag?.item && S().tool === 'select' && drag.item.pathData !== drag.before) commitItem(drag.item);
       drag = null;
     };
@@ -132,6 +147,7 @@ export default function Stage() {
       else if (ev.key === 'Escape') { ctx.current.pen?.remove(); ctx.current.pen = null; st.setSel(null); }
       else if ((ev.key === 'Delete' || ev.key === 'Backspace') && st.selIdx !== null && !blocked()) st.removePath(st.selIdx);
       else if (!ev.ctrlKey && !ev.metaKey) {
+        if (ev.key === '[' || ev.key === ']') { const b = st.brush; st.setBrush({ size: Math.max(1, Math.min(120, Math.round(b.size * (ev.key === ']' ? 1.15 : 0.87) + (ev.key === ']' ? 1 : -1)))) }); return; }
         const map = { v: 'select', p: 'pen', b: 'brush', e: 'eraser', g: 'fill' };
         if (map[ev.key.toLowerCase()]) st.setTool(map[ev.key.toLowerCase()]);
       }
@@ -152,7 +168,8 @@ export default function Stage() {
     const ro = new ResizeObserver(() => { const r = cv.parentElement.getBoundingClientRect(); paper.view.viewSize = new paper.Size(r.width, r.height); ctx.current.fit?.(); });
     ro.observe(cv.parentElement);
     window.__tradigital = { paper, store: useStore };
-    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onKey); cv.removeEventListener('wheel', onWheel); ro.disconnect(); paper.project.remove(); };
+    return () => {
+      cv.removeEventListener('pointerdown', onPtr); cv.removeEventListener('pointermove', onPtr); window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onKey); cv.removeEventListener('wheel', onWheel); ro.disconnect(); paper.project.remove(); };
   }, []);
 
   // fit viewport to the current view's cell

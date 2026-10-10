@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Stage from './Stage.jsx';
 import ColorPanel from './ColorPanel.jsx';
+import { BRUSH_MODES, BRUSH_DEFAULTS } from './brush.js';
 import { useStore, PART_GROUPS } from './store.js';
 import { VIEWS, instanceName, getPart } from '../../src/model/rig.js';
 import { viewScene, viewBounds, slotStatus, partnerKey, screenSide } from './scene.js';
@@ -128,6 +129,17 @@ function Inspector() {
       <div className="tools">
         {TOOLS.map(([id, label, k]) => <button key={id} className={s.tool === id ? 'on' : ''} onClick={() => s.setTool(id)} title={`${label} (${k})`} data-tool={id}>{label}<kbd>{k}</kbd></button>)}
       </div>
+      {s.tool === 'brush' && (
+        <div className="brushopts">
+          <h4>Brush</h4>
+          {[['size', 'Size', 1, 120], ['smoothing', 'Smoothing', 0, 100], ['thinning', 'Pressure / speed', 0, 100], ['taperStart', 'Start taper', 0, 100], ['taperEnd', 'End taper', 0, 100]].map(([k, label, min, max]) => (
+            <label className="row" key={k}><span className="lbl">{label}</span><input type="range" min={min} max={max} value={s.brush[k]} onChange={e => s.setBrush({ [k]: +e.target.value })} data-brush={k} /><output>{s.brush[k]}</output></label>
+          ))}
+          <label className="row"><span className="lbl">Width from</span><select value={s.brush.mode} onChange={e => s.setBrush({ mode: e.target.value })} data-brush="mode">{BRUSH_MODES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+          <button onClick={() => s.setBrush(BRUSH_DEFAULTS)}>Reset brush</button>
+          <p className="hint2">Draws a filled shape in the fill color. [ and ] change the size.</p>
+        </div>
+      )}
       {art?.mirrorOf && <div className="note">Mirrored from <b>{art.mirrorOf}</b>. <button onClick={s.unlinkSelected}>Edit separately</button></div>}
       <label className="row">Fill <input type="color" value={st.fill} onChange={e => s.setStyle({ fill: e.target.value })} />
         <input type="checkbox" checked={st.filled} onChange={e => s.setStyle({ filled: e.target.checked })} title="fill closed shapes" /></label>
